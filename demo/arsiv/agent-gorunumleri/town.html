@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusOS · Agent kasabası</title>
+<style>
+  :root { --bg:#070b14; --fg:#cfe3ff; --dim:#6b7fa3; --card:#0d1628; --line:#22355a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:14px 20px 6px; }
+  h1 { margin:0; font-size:17px; letter-spacing:.07em; } header p { margin:0; color:var(--dim); flex:1 1 280px; } header a { color:var(--dim); }
+  button, select { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:5px 12px; font:inherit; cursor:pointer; }
+  .wrap { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:14px; padding:8px 20px 24px; }
+  @media (max-width:900px) { .wrap { grid-template-columns:1fr; } }
+  #st { position:relative; aspect-ratio:816/480; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:#6fbf5b; }
+  canvas { position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; }
+  .lb { position:absolute; transform:translate(-50%,-100%); font:600 11px system-ui; color:#2b3a2a; background:#ffffffcc; border-radius:6px; padding:0 6px; white-space:nowrap; pointer-events:none; }
+  .bub { position:absolute; transform:translate(-50%,-100%); max-width:200px; background:#fffffff2; color:#1d2433; border:2px solid var(--c); border-radius:10px; padding:3px 8px; font-size:12px; z-index:5; pointer-events:none; }
+  .bub.tl { color:#5b6578; border-style:dashed; }
+  .neon .bub { background:#0d1628f2; color:#cfe3ff; } .neon .bub.tl { color:#8aa3c8; } .neon .lb { background:#0d1628cc; color:#cfe3ff; }
+  header .gv a { margin-right:8px; } header .gv a.on { color:var(--fg); font-weight:600; }
+  aside { display:flex; flex-direction:column; gap:12px; }
+  .box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 12px; }
+  .box h3 { margin:0 0 6px; font-size:12px; letter-spacing:.08em; color:var(--dim); font-weight:600; }
+  .row { display:flex; align-items:center; gap:8px; padding:2px 0; } .row i { width:9px; height:9px; border-radius:50%; background:var(--c); opacity:.25; } .row.w i { opacity:1; animation:blink 1s infinite; } .row.d i { opacity:1; } .row span:last-child { margin-left:auto; color:var(--dim); font-size:12px; }
+  @keyframes blink { 50% { opacity:.3; } }
+  #log { max-height:210px; overflow:auto; font-size:12px; } #log div { padding:2px 0 2px 8px; border-left:3px solid var(--c); margin:3px 0; }
+  #sonuc { font-size:18px; font-weight:700; } .ok { color:#6ee7a0; } .no { color:#ff7a7a; }
+</style>
+</head>
+<body>
+<header>
+  <h1>NEXUSOS · AGENT KASABASI</h1>
+  <p id="baslik">…</p>
+  <span class="gv" id="gv"></span>
+  <button id="pl">⏸</button><button id="rs">⏮ baştan</button>
+  <select id="sp"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select>
+</header>
+<div class="wrap">
+  <div id="st"><canvas id="cv" width="816" height="480"></canvas></div>
+  <aside>
+    <div class="box"><h3>AGENT'LAR</h3><div id="ags"></div></div>
+    <div class="box"><h3>SONUÇ</h3><div id="sonuc">…</div></div>
+    <div class="box"><h3>KONUŞMA</h3><div id="log"></div></div>
+  </aside>
+</div>
+<script>
+// AI Town style: robots walk the roads between buildings to deliver requests, work at their own building, then walk home.
+// An event runs only when its time has come AND everything addressed to its actor has arrived, so walking decides the pace.
+const T = 12, W = 68, H = 40, cv = $("cv").getContext("2d");
+// ?g=duz (top-down) | izo (isometric pixel office, light) | neon (isometric, dark glowing grid). Same choreography, only drawing differs.
+const G = location.hash.slice(1) || new URLSearchParams(location.search).get("g") || "duz", ISO = G !== "duz", NEON = G === "neon";
+addEventListener("hashchange", () => location.reload());
+const K = .62, OX = 304, OY = 26;
+const pr = (x, y) => ISO ? [OX + (x - y) * K, OY + (x + y) * K / 2] : [x, y];   // world px -> screen px
+const PAL = NEON ? { bg:"#04070e", tA:"#070d1a", tB:"#060b17", grid:"#10264a", road:"#0a1b36", edge:"#2fd0ff", wall:"#0a1a33", wallR:"#071326" }
+                 : { bg:"#e9e4d6", tA:"#e2d8bf", tB:"#d9cfb4", road:"#b7c3d6", edge:"#ffffff", wall:"#f4efe2", wallR:"#e0d9c6" };
+const CX = [10, 26, 42, 58], RY = [12, 24, 36];   // road grid: node (c, r) is an intersection
+const PLACE = { ev:[0,2], musteri:[0,1], crm:[2,0], katalog:[3,0], kampanya:[3,1], risk:[2,2], sozlesme:[1,2] };
+const HOME = { "müşteri":"ev", "orkestratör":"musteri", analiz:"crm", teklif:"katalog", kampanya:"kampanya", risk:"risk", "sözleşme":"sozlesme" };
+const COL = { "müşteri":"#f2c14e", "orkestratör":"#ff7b9c", analiz:"#4fd1ff", teklif:"#4cc96a", kampanya:"#c792ea", risk:"#ff9f43", "sözleşme":"#4f8cff" };
+function $(id) { return document.getElementById(id); }
+const st = $("st"), node = ([c, r]) => [CX[c] * T, RY[r] * T];
+
+function route(a, b) {   // shortest way over the road grid (BFS), as a list of nodes
+  const key = ([c, r]) => c + "," + r, prev = { [key(a)]: null }, q = [a];
+  while (q.length) { const n = q.shift(); if (key(n) === key(b)) break;
+    for (const [dc, dr] of [[1,0],[-1,0],[0,1],[0,-1]]) { const m = [n[0] + dc, n[1] + dr];
+      if (m[0] < 0 || m[0] > 3 || m[1] < 0 || m[1] > 2 || key(m) in prev) continue; prev[key(m)] = n; q.push(m); } }
+  const out = []; for (let n = b; n; n = prev[key(n)]) out.unshift(n); return out;
+}
+let D, evs, now, R, bub, lb, waiting, running, last, active;
+if (ISO) st.style.background = PAL.bg; if (NEON) document.body.classList.add("neon");
+$("gv").innerHTML = [["duz", "düz"], ["izo", "izometrik"], ["neon", "neon"]].map(([k, t]) => `<a href="#${k}" class="${k === G ? "on" : ""}">${t}</a>`).join("");
+const sp = () => +$("sp").value;
+const idx = a => Object.keys(COL).indexOf(a);
+const homeOf = r => r.name === "müşteri" && r.visited ? "musteri" : HOME[r.name];   // the customer comes to the store and stays
+
+function build(d) {
+  D = d; evs = d.events.map((e, i) => ({ ...e, i, done: false, queued: false })).sort((a, b) => a.t - b.t);
+  $("baslik").textContent = d.title; st.querySelectorAll(".bub,.lb").forEach(e => e.remove());
+  R = {}; bub = {}; waiting = {}; now = 0; active = {};
+  for (const a of Object.keys(COL)) { const n = PLACE[HOME[a]], [x, y] = node(n);
+    R[a] = { name: a, node: n, x: x + (idx(a) % 3 - 1) * 6, y: y + 6 + idx(a) % 2 * 5, path: null, q: [], cur: null, hasTask: a === "müşteri" || a === "orkestratör", face: 1, wait: false }; }
+  lb = {}; for (const [k, [c, r]] of Object.entries(PLACE)) { const el = document.createElement("div"); el.className = "lb"; const [x, y] = node([c, r]);
+    if (ISO) { const g = bgeo(k, [c, r]), [lx, ly] = pr((g.x0 + g.x1) / 2, g.y0); el.style.cssText = `left:${lx / 8.16}%;top:${(ly - g.h - 8) / 4.8}%`; }
+    else el.style.cssText = `left:${x / W / T * 100}%;top:${(y - 10 * T) / H / T * 100}%`; el.textContent = k === "musteri" ? "mağaza · satış kanalı" : k === "ev" ? "müşteri evi" : (d.stations[k]?.label || k); st.append(el); }
+  $("ags").innerHTML = Object.keys(COL).filter(a => a !== "müşteri").map(a => `<div class="row" id="r-${a}" style="--c:${COL[a]}"><i></i><span>${a}</span><span>${a === "orkestratör" ? "hazır" : "bekliyor"}</span></div>`).join("");
+  $("log").innerHTML = ""; $("sonuc").textContent = "…"; $("sonuc").className = "";
+}
+const setRow = (a, cls, txt) => { const r = $("r-" + a); if (!r) return; r.className = "row " + cls; r.lastElementChild.textContent = txt; R[a].wait = cls === "w" && /yanıt/.test(txt); };
+function say(a, text, cls, ms) {
+  bub[a]?.el.remove(); const el = document.createElement("div"); el.className = "bub " + (cls || ""); el.style.setProperty("--c", COL[a]); el.textContent = text; st.append(el);
+  bub[a] = { el, until: now + ms };
+}
+function logLine(from, to, text) { const l = document.createElement("div"); l.style.setProperty("--c", COL[from]); l.innerHTML = `<b style="color:${COL[from]}">${from}${to ? " → " + to : ""}</b> ${text}`; $("log").append(l); $("log").scrollTop = 1e5; }
+
+function ready(e) {   // the actor must have received everything addressed to it earlier in the script
+  if (e.t > now) return false;
+  const who = e.kind === "msg" ? e.from : e.agent;
+  return evs.every(p => !(p.kind === "msg" && p.to === who && p.i < e.i) || p.done);
+}
+function deliver(e) {   // the walker has arrived: say it, update statuses
+  const { from: f, to: t } = e; say(f, e.text, "", 3); if (f === "müşteri") R[f].visited = true;
+  logLine(f, t, e.text); R[t].hasTask = true;
+  if (e.reply) {
+    delete waiting[t + ">" + f]; setRow(f, "d", "işini verdi");
+    for (const x of e.closes || []) { for (const k of Object.keys(waiting)) if (k.startsWith(x + ">") || (k.startsWith(t + ">") && k.endsWith(">" + x))) delete waiting[k]; setRow(x, "d", "devretti, bitti"); }
+    const w = Object.keys(waiting).find(k => k.startsWith(t + ">")); setRow(t, "w", w ? "yanıt bekliyor: " + w.split(">")[1] : "çalışıyor");
+  } else if (f !== "müşteri" && t !== "müşteri") { waiting[f + ">" + t] = 1; setRow(t, "w", "çalışıyor"); setRow(f, "w", "yanıt bekliyor: " + t); }
+}
+function startTask(r, e) {
+  r.cur = e;
+  if (e.kind === "msg") { r.path = route(r.node, PLACE[e.to === "müşteri" ? "musteri" : HOME[e.to]]); r.phase = "go"; }   // the customer is met at the store
+  else { r.path = route(r.node, PLACE[homeOf(r)]); r.phase = "go"; }   // tool/say happen at home
+  r.timer = 0;
+}
+function step(r, dt) {
+  if (!r.cur) {
+    const e = r.q.shift();
+    if (e) return startTask(r, e);
+    const home = PLACE[homeOf(r)];   // idle: go home
+    if (r.node[0] !== home[0] || r.node[1] !== home[1]) { r.path = route(r.node, home); r.phase = "home"; r.cur = { kind: "walk" }; }
+    return;
+  }
+  const e = r.cur;
+  if (r.phase === "go" || r.phase === "home") {   // walk along the nodes of the path
+    while (r.path.length && r.path[0][0] === r.node[0] && r.path[0][1] === r.node[1]) r.path.shift();
+    const tgt = r.path[0];
+    if (!tgt) { r.phase = "act"; r.timer = 0;
+      if (e.kind === "walk") { r.cur = null; return; }
+      if (e.kind === "msg") deliver(e); else if (e.kind === "tool") { say(r.name, "🔧 " + e.text, "tl", 3.2); logLine(r.name, null, "🔧 " + e.text); active[HOME[r.name]] = 1; }
+      else { say(r.name, e.text, "", 2.6); logLine(r.name, null, e.text); const m = /^Sonuç:\s*(.+)/.exec(e.text); if (m) { $("sonuc").textContent = m[1]; $("sonuc").className = /satış/i.test(m[1]) ? "ok" : "no"; setRow("orkestratör", "d", "bitti"); } }
+      return; }
+    const [tx, ty] = node(tgt), ox = (idx(r.name) % 3 - 1) * 6, oy = 6 + idx(r.name) % 2 * 5, dx = tx + ox - r.x, dy = ty + oy - r.y, d = Math.hypot(dx, dy), s = 14 * T * 0.5 * dt;
+    if (d < s) { r.x = tx + ox; r.y = ty + oy; r.node = tgt; } else { r.x += dx / d * s; r.y += dy / d * s; if (Math.abs(dx) > 1) r.face = Math.sign(dx); }
+    r.step = (r.step || 0) + dt * 12; return;
+  }
+  r.timer += dt;   // acting: stay put for a moment
+  const dur = e.kind === "tool" ? 3.2 : 1.8;
+  if (r.timer >= dur) { if (e.kind === "tool") delete active[HOME[r.name]]; e.done = true; r.cur = null; }
+}
+function frame(ts) {
+  const dt = Math.min(0.1, (ts - (last || ts)) / 1000) * sp(); last = ts; if (running) {
+    now += dt;
+    for (const e of evs) if (!e.queued && ready(e)) { e.queued = true; R[e.kind === "msg" ? e.from : e.agent].q.push(e); }
+    for (const r of Object.values(R)) step(r, dt);
+    if (evs.every(e => e.done) && Object.values(R).every(r => !r.cur && !r.q.length)) { running = false; $("pl").textContent = "▶"; }
+  }
+  draw(); requestAnimationFrame(frame);
+}
+function rect(x, y, w, h, c) { cv.fillStyle = c; cv.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.round(h)); }
+function draw() {
+  if (ISO) return drawIso();
+  rect(0, 0, W * T, H * T, "#6fbf5b");
+  for (let y = 0; y < H; y++) for (let x = (y % 2); x < W; x += 2) rect(x * T, y * T, T, T, "#68b655");
+  const rw = 3 * T;   // roads
+  for (const x of CX) rect(x * T - rw / 2, RY[0] * T - rw / 2, rw, (RY[2] - RY[0]) * T + rw, "#d9c48f");
+  for (const y of RY) rect(CX[0] * T - rw / 2, y * T - rw / 2, (CX[3] - CX[0]) * T + rw, rw, "#d9c48f");
+  const [fx, fy] = node([2, 1]); cv.fillStyle = "#6fb7e8"; cv.beginPath(); cv.arc(fx, fy, 2.2 * T, 0, 7); cv.fill(); cv.strokeStyle = "#fff"; cv.lineWidth = 3; cv.stroke();
+  for (const [c, r] of [[0,0],[1,0],[1,1],[3,2]]) { const [x, y] = node([c, r]); for (const [ox, oy] of [[-24,-30],[12,-34],[-4,-8]]) tree(x + ox, y + oy); }
+  for (const [k, [c, r]] of Object.entries(PLACE)) building(k, ...node([c, r]));
+  for (const r of Object.values(R).sort((a, b) => a.y - b.y)) robot(r);
+  placeBubbles();
+}
+function placeBubbles() {
+  for (const [a, b] of Object.entries(bub)) { if (now > b.until) { b.el.remove(); delete bub[a]; continue; }
+    const [x, y] = pr(R[a].x, R[a].y); b.el.style.left = x / 8.16 + "%"; b.el.style.top = (y - 22) / 4.8 + "%"; }
+}
+const P3 = (x, y, z) => { const [a, b] = pr(x, y); return [a, b - z]; };
+function poly(pts, fill, stroke, lw) {
+  cv.beginPath(); pts.forEach(([a, b], i) => i ? cv.lineTo(a, b) : cv.moveTo(a, b)); cv.closePath();
+  if (fill) { cv.fillStyle = fill; cv.fill(); } if (stroke) { cv.strokeStyle = stroke; cv.lineWidth = lw || 1; cv.stroke(); }
+}
+const flat = (x0, y0, x1, y1, z = 0) => [P3(x0, y0, z), P3(x1, y0, z), P3(x1, y1, z), P3(x0, y1, z)];
+function isoBox(x0, y0, x1, y1, h, top, left, right, edge) {   // visible faces: y=y1 (front-left), x=x1 (front-right), roof
+  poly([P3(x0, y1, 0), P3(x1, y1, 0), P3(x1, y1, h), P3(x0, y1, h)], left, edge);
+  poly([P3(x1, y0, 0), P3(x1, y1, 0), P3(x1, y1, h), P3(x1, y0, h)], right, edge);
+  poly(flat(x0, y0, x1, y1, h), top, edge);
+}
+// building sits north-east of its intersection so the roads stay free for walking
+const bgeo = (k, n) => { const [x, y] = node(n), w = k === "musteri" ? 132 : k === "ev" ? 84 : 96; return { x0: x + 24, x1: x + 24 + w, y0: y - 78, y1: y - 18, h: k === "musteri" ? 44 : 36 }; };
+function isoBuilding(k, n) {
+  const g = bgeo(k, n), on = active[k], col = ROOF[k], w = g.x1 - g.x0;
+  if (NEON) { cv.shadowColor = col; cv.shadowBlur = on ? 22 : 8; }
+  isoBox(g.x0, g.y0, g.x1, g.y1, g.h, NEON ? col + (on ? "99" : "44") : col, PAL.wall, PAL.wallR, NEON ? col : "#0003");
+  cv.shadowBlur = 0;
+  for (let i = 0; i < 3; i++) { const wx = g.x0 + w * (i + .5) / 3;
+    poly([P3(wx - 7, g.y1, 16), P3(wx + 7, g.y1, 16), P3(wx + 7, g.y1, 28), P3(wx - 7, g.y1, 28)], on ? "#ffe27a" : NEON ? col + "55" : "#9fc4e8"); }
+  poly([P3(g.x0 + 8, g.y1, 0), P3(g.x0 + 22, g.y1, 0), P3(g.x0 + 22, g.y1, 14), P3(g.x0 + 8, g.y1, 14)], NEON ? col : "#7a5230");
+  if (on) { const p = (now * 0.8) % 1; cv.strokeStyle = "#fff"; cv.lineWidth = 3; cv.beginPath(); const a = P3(g.x0, g.y1, g.h + 8), b = P3(g.x0 + w * p, g.y1, g.h + 8); cv.moveTo(...a); cv.lineTo(...b); cv.stroke(); }
+}
+function isoTree(x, y) { const [a, b] = pr(x, y); rect(a - 2, b - 8, 4, 9, "#7a5230"); cv.fillStyle = "#4e9a3f"; cv.beginPath(); cv.arc(a, b - 14, 10, 0, 7); cv.fill(); }
+function drawIso() {
+  cv.fillStyle = PAL.bg; cv.fillRect(0, 0, W * T, H * T);
+  const S = 24, ww = W * T, hh = H * T;
+  if (NEON) { cv.strokeStyle = PAL.grid; cv.lineWidth = 1; cv.beginPath();
+    for (let x = 0; x <= ww; x += S) { cv.moveTo(...P3(x, 0, 0)); cv.lineTo(...P3(x, hh, 0)); }
+    for (let y = 0; y <= hh; y += S) { cv.moveTo(...P3(0, y, 0)); cv.lineTo(...P3(ww, y, 0)); } cv.stroke(); }
+  else for (let y = 0; y < hh; y += S) for (let x = 0; x < ww; x += S) poly(flat(x, y, x + S, y + S), ((x + y) / S) % 2 ? PAL.tA : PAL.tB);
+  const rw = 18, V = CX.map(c => c * T), Hs = RY.map(r => r * T);
+  for (const x of V) poly(flat(x - rw, Hs[0] - rw, x + rw, Hs[2] + rw), PAL.road);
+  for (const y of Hs) poly(flat(V[0] - rw, y - rw, V[3] + rw, y + rw), PAL.road);
+  cv.strokeStyle = NEON ? "#2fd0ff88" : "#ffffffaa"; cv.lineWidth = 1.5; cv.setLineDash([8, 10]); cv.lineDashOffset = -now * 30; cv.beginPath();   // lane marks; they flow in neon
+  for (const x of V) { cv.moveTo(...P3(x, Hs[0], 0)); cv.lineTo(...P3(x, Hs[2], 0)); }
+  for (const y of Hs) { cv.moveTo(...P3(V[0], y, 0)); cv.lineTo(...P3(V[3], y, 0)); } cv.stroke(); cv.setLineDash([]);
+  const [fx, fy] = node([2, 1]); poly(Array.from({ length: 24 }, (_, i) => P3(fx + Math.cos(i / 24 * 6.283) * 26, fy + Math.sin(i / 24 * 6.283) * 26, 0)), NEON ? "#0b3a5a" : "#6fb7e8", PAL.edge, 2);
+  const items = [];
+  for (const [k, n] of Object.entries(PLACE)) { const g = bgeo(k, n); items.push({ d: g.x1 + g.y1, f: () => isoBuilding(k, n) }); }
+  if (!NEON) for (const [x, y] of [[40, 40], [150, 70], [330, 150], [700, 440], [60, 330], [560, 40]]) items.push({ d: x + y, f: () => isoTree(x, y) });
+  for (const r of Object.values(R)) items.push({ d: r.x + r.y, f: () => robot(r) });
+  items.sort((a, b) => a.d - b.d).forEach(i => i.f());
+  placeBubbles();
+}
+function tree(x, y) { rect(x - 2, y, 4, 8, "#7a5230"); cv.fillStyle = "#2e8b3d"; cv.beginPath(); cv.arc(x, y - 2, 9, 0, 7); cv.fill(); }
+const ROOF = { ev:"#e8a33d", musteri:"#c0392b", crm:"#2e86de", katalog:"#27ae60", kampanya:"#8e44ad", risk:"#e67e22", sozlesme:"#34495e" };
+function building(k, x, y) {
+  const w = k === "musteri" ? 16 * T : k === "ev" ? 9 * T : 13 * T, h = 8 * T, bx = x - w / 2, by = y - 2 * T - h;
+  if (active[k]) { cv.fillStyle = "#fff6"; cv.fillRect(bx - 5, by - 5, w + 10, h + 10); }
+  rect(bx, by + 2 * T, w, h - 2 * T, "#f4efe2"); rect(bx - 3, by, w + 6, 2 * T + 4, ROOF[k]);
+  for (let i = 1; i < 4; i++) rect(bx + i * w / 4 - 6, by + 4 * T, 12, 14, active[k] ? "#ffe27a" : "#9fc4e8");
+  rect(x - 8, y - 2 * T - 20, 16, 20, "#7a5230");
+  if (active[k]) { const p = (now * 0.8) % 1; rect(bx, by - 10, w, 5, "#0004"); rect(bx, by - 10, w * p, 5, "#fff"); }
+}
+function robot(r) {
+  const c = COL[r.name], moving = r.cur && (r.phase === "go" || r.phase === "home") && r.path?.length, bob = moving ? Math.sin(r.step) * 1.5 : 0, [px, py] = pr(r.x, r.y), x = Math.round(px), y = Math.round(py + bob);
+  if (NEON) { cv.shadowColor = c; cv.shadowBlur = 10; }
+  cv.fillStyle = NEON ? "#0008" : "#0003"; cv.beginPath(); cv.ellipse(x, py + 6, 7, 3, 0, 0, 7); cv.fill();
+  rect(x - 5, y - 4, 10, 8, c); rect(x - 4, y + 4, 3, 3, "#223"); rect(x + 1, y + 4, 3, 3, "#223");   // body, feet
+  rect(x - 6, y - 14, 12, 10, "#fdfdfd"); rect(x - 6, y - 14, 12, 2, c);   // head
+  rect(x - 4 + (r.face > 0 ? 1 : 0), y - 11, 3, 3, "#223"); rect(x + 1 + (r.face > 0 ? 1 : 0), y - 11, 3, 3, "#223");   // eyes
+  rect(x - 1, y - 18, 2, 4, c); rect(x - 2, y - 20, 4, 3, c);   // antenna
+  if (r.name === "müşteri") rect(x - 7, y - 16, 14, 3, "#8a5a2b");   // hair
+  cv.shadowBlur = 0;
+  if (r.wait) { cv.fillStyle = NEON ? "#fff" : "#345"; cv.font = "10px system-ui"; cv.fillText("…", x - 4, y - 24); }
+}
+$("pl").onclick = () => { if (running) { running = false; $("pl").textContent = "▶"; } else { if (evs.every(e => e.done)) build(D); running = true; $("pl").textContent = "⏸"; } };
+$("rs").onclick = () => { build(D); running = true; $("pl").textContent = "⏸"; };
+fetch(new URLSearchParams(location.search).get("data") || "telekom-ag.json").then(r => r.json()).then(d => { build(d); running = true; requestAnimationFrame(frame); });
+</script>
+</body>
+</html>

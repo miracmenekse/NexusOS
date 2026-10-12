@@ -1,0 +1,218 @@
+{
+ "title": "Telekom satış · agent'lar birbirine iş devrediyor",
+ "stations": {
+  "musteri": {
+   "label": "müşteri hattı",
+   "x": 0.1,
+   "y": 0.5,
+   "color": "#f2c14e"
+  },
+  "crm": {
+   "label": "CRM",
+   "x": 0.32,
+   "y": 0.22,
+   "color": "#4fd1ff"
+  },
+  "katalog": {
+   "label": "tarife kataloğu",
+   "x": 0.55,
+   "y": 0.22,
+   "color": "#7ee787"
+  },
+  "kampanya": {
+   "label": "kampanya motoru",
+   "x": 0.72,
+   "y": 0.45,
+   "color": "#c792ea"
+  },
+  "risk": {
+   "label": "kredi / risk",
+   "x": 0.55,
+   "y": 0.8,
+   "color": "#ffab70"
+  },
+  "sozlesme": {
+   "label": "sözleşme",
+   "x": 0.32,
+   "y": 0.8,
+   "color": "#79c0ff"
+  },
+  "meeting": {
+   "label": "koordinasyon",
+   "x": 0.38,
+   "y": 0.5,
+   "color": "#ff7b9c"
+  }
+ },
+ "agents": {
+  "müşteri": "Mevcut abone, faturası yüksek, rakip teklifi var",
+  "orkestratör": "Satış sürecini yönetir, işi agent'lara dağıtır",
+  "analiz": "CRM'den kullanım ve fatura geçmişini çıkarır",
+  "teklif": "Katalogdan uygun tarifeyi seçer",
+  "kampanya": "İndirim ve ek paket önerir, marj sınırını korur",
+  "risk": "Kredi skoru ve cihaz taksit uygunluğunu kontrol eder",
+  "sözleşme": "Taahhüt ve sözleşmeyi hazırlar"
+ },
+ "events": [
+  {
+   "t": 0,
+   "kind": "msg",
+   "from": "müşteri",
+   "to": "orkestratör",
+   "text": "Faturam 510 TL, rakip 420 TL teklif etti"
+  },
+  {
+   "t": 2,
+   "kind": "msg",
+   "from": "orkestratör",
+   "to": "analiz",
+   "text": "Müşteriyi çöz: kullanım, fatura, rakip riski"
+  },
+  {
+   "t": 3.5,
+   "kind": "tool",
+   "agent": "analiz",
+   "station": "crm",
+   "text": "CRM: abonelik ve son 6 ay kullanım"
+  },
+  {
+   "t": 4,
+   "kind": "msg",
+   "from": "orkestratör",
+   "to": "risk",
+   "text": "Kredi skorunu kontrol et"
+  },
+  {
+   "t": 5.5,
+   "kind": "tool",
+   "agent": "risk",
+   "station": "risk",
+   "text": "Kredi skoru sorgusu: 514"
+  },
+  {
+   "t": 6,
+   "kind": "msg",
+   "from": "analiz",
+   "to": "teklif",
+   "text": "25 GB kullanıyor, ödemeleri düzenli. Uygun tarife?"
+  },
+  {
+   "t": 7.5,
+   "kind": "tool",
+   "agent": "teklif",
+   "station": "katalog",
+   "text": "Katalog taraması: 25 GB için tarifeler"
+  },
+  {
+   "t": 8.5,
+   "kind": "msg",
+   "from": "teklif",
+   "to": "kampanya",
+   "text": "Ultra 40 GB 449 TL. Rakibin altına inebilir miyiz?"
+  },
+  {
+   "t": 10,
+   "kind": "tool",
+   "agent": "kampanya",
+   "station": "kampanya",
+   "text": "%11 indirim deniyorum, marj kontrolü"
+  },
+  {
+   "t": 11,
+   "kind": "say",
+   "agent": "risk",
+   "text": "Skor düşük: taksit yok, peşin önerilsin"
+  },
+  {
+   "t": 12,
+   "kind": "msg",
+   "from": "risk",
+   "to": "orkestratör",
+   "text": "Skor 514: telefon taksiti yok, peşin öner",
+   "reply": true
+  },
+  {
+   "t": 12.5,
+   "kind": "msg",
+   "from": "kampanya",
+   "to": "teklif",
+   "text": "400 TL marj içinde, onaylıyorum",
+   "reply": true
+  },
+  {
+   "t": 14.5,
+   "kind": "msg",
+   "from": "teklif",
+   "to": "orkestratör",
+   "text": "Önerim: Ultra 40 GB, 400 TL",
+   "reply": true,
+   "closes": [
+    "analiz"
+   ]
+  },
+  {
+   "t": 16.5,
+   "kind": "msg",
+   "from": "orkestratör",
+   "to": "müşteri",
+   "text": "Teklif: Ultra 40 GB 400 TL"
+  },
+  {
+   "t": 18.5,
+   "kind": "msg",
+   "from": "müşteri",
+   "to": "orkestratör",
+   "text": "Tamam, kabul ediyorum"
+  },
+  {
+   "t": 20,
+   "kind": "msg",
+   "from": "orkestratör",
+   "to": "sözleşme",
+   "text": "Kabul edildi: sözleşme hazırla"
+  },
+  {
+   "t": 21.5,
+   "kind": "tool",
+   "agent": "sözleşme",
+   "station": "sozlesme",
+   "text": "12 ay taahhüt sözleşmesi hazırlanıyor"
+  },
+  {
+   "t": 23,
+   "kind": "msg",
+   "from": "sözleşme",
+   "to": "analiz",
+   "text": "İmza tamam, CRM'de tarifeyi güncelle"
+  },
+  {
+   "t": 24.5,
+   "kind": "tool",
+   "agent": "analiz",
+   "station": "crm",
+   "text": "CRM güncellendi: yeni tarife aktif"
+  },
+  {
+   "t": 26,
+   "kind": "msg",
+   "from": "analiz",
+   "to": "sözleşme",
+   "text": "CRM tamam",
+   "reply": true
+  },
+  {
+   "t": 27.5,
+   "kind": "msg",
+   "from": "sözleşme",
+   "to": "orkestratör",
+   "text": "e-imza alındı, süreç tamam",
+   "reply": true
+  },
+  {
+   "t": 29,
+   "kind": "say",
+   "agent": "orkestratör",
+   "text": "Sonuç: satış"
+  }
+ ]
+}

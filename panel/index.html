@@ -1,0 +1,479 @@
+<title>NexusOS Paneli</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: mühendislik paftası — üstte künye şeridi (ilerleme, aşama, bekleyenler), altında sekmeli çalışma alanı; WBS kodları mono. */
+:root {
+  --bg: #f3f5f8; --surface: #ffffff; --ink: #172230; --muted: #5a6778; --line: #d8dee6;
+  --accent: #2450c8; --ok: #1d7f55; --warn: #a86a12; --bad: #b83a26; --idle: #7c8796;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 6px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e131a; --surface: #151c26; --ink: #e3e8ef; --muted: #96a2b2; --line: #263140;
+  --accent: #82a3ff; --ok: #4cc38a; --warn: #e2ad48; --bad: #f07a63; --idle: #8794a6; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #0e131a; --surface: #151c26; --ink: #e3e8ef; --muted: #96a2b2; --line: #263140;
+  --accent: #82a3ff; --ok: #4cc38a; --warn: #e2ad48; --bad: #f07a63; --idle: #8794a6; color-scheme: dark }
+
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--f-body); }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 20px 16px 48px; display: grid; gap: 20px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.2; }
+h1 { font-size: 26px; letter-spacing: -0.01em; }
+h2 { font-size: 18px; }
+h3 { font-size: 15px; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--muted); }
+.mono { font-family: var(--f-mono); font-size: 13px; }
+.label { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+button, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* künye */
+.kunye { display: grid; gap: 14px; padding-block: 18px; padding-inline: 18px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); }
+.kunye-top { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: baseline; justify-content: space-between; }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.stat { display: grid; gap: 2px; min-width: 0; }
+.stat b { font: 600 20px/1.2 var(--f-display); font-variant-numeric: tabular-nums; }
+.bar { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--ok); width: 0; transition: width .4s; }
+.note { font-size: 13px; color: var(--muted); }
+.note.err { color: var(--bad); }
+
+/* sekmeler */
+.tabs { display: flex; gap: 4px; overflow-x: auto; border-bottom: 1px solid var(--line); scrollbar-width: thin; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; color: var(--muted); white-space: nowrap; font-weight: 500; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tabs .count { font-family: var(--f-mono); font-size: 12px; margin-left: 4px; color: var(--muted); }
+section[role="tabpanel"] { display: grid; gap: 18px; }
+
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 18px; }
+.box { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+ul.plain { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.empty { border: 1px dashed var(--line); border-radius: var(--r); padding: 18px; color: var(--muted); font-size: 14px; }
+
+/* durum hapları */
+.pill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap;
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, var(--surface)); }
+.pill::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--c); }
+.s-yapilacak { --c: var(--idle); } .s-yapiliyor { --c: var(--accent); } .s-dis_bekliyor { --c: var(--warn); } .s-bitti { --c: var(--ok); }
+.s-bekliyor { --c: var(--warn); } .s-cevaplandi { --c: var(--ok); }
+.s-acik { --c: var(--bad); } .s-kapali { --c: var(--ok); }
+
+/* WBS ağacı */
+.tree { display: grid; gap: 0; }
+.node { display: grid; grid-template-columns: auto 1fr auto; gap: 4px 12px; padding-block: 10px; border-top: 1px solid var(--line); align-items: start; }
+.node:first-child { border-top: 0; }
+.node .kod { font-family: var(--f-mono); font-size: 13px; color: var(--accent); min-width: 3.5em; }
+.node.parent .ad { font-weight: 600; }
+.node .det { grid-column: 2 / -1; font-size: 13px; color: var(--muted); display: grid; gap: 2px; }
+.node .det b { color: var(--ink); font-weight: 500; }
+.lanes { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(200px, 1fr); gap: 12px; overflow-x: auto; padding-bottom: 4px; }
+.lane { display: grid; gap: 8px; align-content: start; }
+.chip { border: 1px solid var(--line); border-left: 3px solid var(--c); border-radius: var(--r); padding: 8px 10px; background: var(--surface); font-size: 13px; display: grid; gap: 2px; }
+
+/* pano */
+.board { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; align-items: start; }
+.col { background: color-mix(in srgb, var(--line) 35%, var(--bg)); border-radius: var(--r); padding: 10px; display: grid; gap: 8px; }
+.col h3 { display: flex; justify-content: space-between; align-items: center; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 10px; display: grid; gap: 6px; font-size: 14px; min-width: 0; }
+.card select { font-size: 13px; padding: 4px 6px; border: 1px solid var(--line); border-radius: 4px; background: var(--surface); }
+
+/* köprü */
+.bridge { display: grid; gap: 12px; }
+.bcard { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; display: grid; gap: 10px; min-width: 0; }
+.bhead { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+.tool { font-family: var(--f-display); font-weight: 700; }
+.prompt { position: relative; }
+.prompt pre { margin: 0; white-space: pre-wrap; word-break: break-word; font: 13px/1.5 var(--f-mono); background: color-mix(in srgb, var(--accent) 6%, var(--bg)); border: 1px solid var(--line); border-radius: var(--r); padding: 12px; max-height: 320px; overflow: auto; }
+.btn { border: 1px solid var(--accent); background: var(--accent); color: var(--surface); border-radius: 4px; padding: 6px 12px; cursor: pointer; font-weight: 600; font-size: 13px; }
+.btn.ghost { background: transparent; color: var(--accent); }
+.btn:disabled { opacity: .5; cursor: default; }
+ol.steps { margin: 0; padding-left: 20px; display: grid; gap: 2px; font-size: 14px; }
+details > summary { cursor: pointer; color: var(--muted); }
+
+/* tablolar */
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; white-space: nowrap; }
+td.num { font-variant-numeric: tabular-nums; font-family: var(--f-mono); }
+.raci td.c { text-align: center; font-family: var(--f-mono); font-weight: 500; }
+
+/* risk matrisi */
+.pi { display: grid; grid-template-columns: auto repeat(5, minmax(34px, 1fr)); gap: 3px; max-width: 360px; font-size: 12px; }
+.pi div { aspect-ratio: 1; display: grid; place-items: center; border-radius: 3px; font-family: var(--f-mono); font-variant-numeric: tabular-nums; max-width: 100%; }
+.pi .ax { color: var(--muted); aspect-ratio: auto; }
+.z-lo { background: color-mix(in srgb, var(--ok) 18%, var(--surface)); }
+.z-md { background: color-mix(in srgb, var(--warn) 22%, var(--surface)); }
+.z-hi { background: color-mix(in srgb, var(--bad) 26%, var(--surface)); }
+.pi .has { font-weight: 600; outline: 2px solid var(--ink); outline-offset: -2px; }
+
+/* sor */
+.ask textarea { width: 100%; min-height: 70px; resize: vertical; border: 1px solid var(--line); border-radius: var(--r); padding: 10px; background: var(--bg); }
+.ask .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.answer { white-space: pre-wrap; font-size: 14px; border-left: 3px solid var(--accent); padding-left: 12px; }
+
+@media (prefers-reduced-motion: reduce) { .bar i { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header class="kunye">
+    <div class="kunye-top">
+      <div>
+        <div class="label">Proje paneli</div>
+        <h1>NexusOS</h1>
+      </div>
+      <span id="asama" class="pill s-yapiliyor">Aşama: —</span>
+    </div>
+    <p id="ozet" class="muted">Metaverse'te bir geliştirme ortamı fikri; şirket Ar-Ge projesine taşınıyor. Panel verisi yükleniyor…</p>
+    <div class="stats">
+      <div class="stat"><span class="label">İş bazlı ilerleme</span><b id="st-ilerleme">—</b><div class="bar"><i id="st-bar"></i></div></div>
+      <div class="stat"><span class="label">Yapılıyor</span><b id="st-yapiliyor">—</b></div>
+      <div class="stat"><span class="label">Bekleyen köprü</span><b id="st-kopru">—</b></div>
+      <div class="stat"><span class="label">Açık risk</span><b id="st-risk">—</b></div>
+    </div>
+    <p id="durum" class="note">Veritabanına bağlanılıyor…</p>
+  </header>
+
+  <nav class="tabs" role="tablist" aria-label="Panel bölümleri">
+    <button role="tab" id="t-genel" aria-controls="genel">Genel</button>
+    <button role="tab" id="t-wbs" aria-controls="wbs">WBS</button>
+    <button role="tab" id="t-pano" aria-controls="pano">Pano</button>
+    <button role="tab" id="t-kopru" aria-controls="kopru">Köprü<span class="count" id="c-kopru"></span></button>
+    <button role="tab" id="t-kaynaklar" aria-controls="kaynaklar">Kaynaklar</button>
+    <button role="tab" id="t-paydas" aria-controls="paydas">Paydaş &amp; RACI</button>
+    <button role="tab" id="t-riskler" aria-controls="riskler">Riskler</button>
+    <button role="tab" id="t-kayit" aria-controls="kayit">Kayıtlar</button>
+  </nav>
+
+  <section role="tabpanel" id="genel" aria-labelledby="t-genel">
+    <div class="grid2">
+      <div class="box">
+        <h2>Proje beratı</h2>
+        <div id="berat"><div class="empty">Berat henüz yazılmadı. Claude, proje dosyalarından amaç, kapsam ve başarı ölçütlerini çıkarıp buraya ekleyecek.</div></div>
+      </div>
+      <div class="box">
+        <h2>Sıradaki işler</h2>
+        <p class="note">Bağımlılıkları bitmiş, henüz tamamlanmamış iş paketleri.</p>
+        <div id="sirada"><div class="empty">İş kırılım yapısı eklenince burada görünür.</div></div>
+      </div>
+    </div>
+    <div class="box ask">
+      <h2>Claude'a sor</h2>
+      <p class="note">Panel verisinin tamamına bakarak cevap verir. Panelde olmayan bir bilgi gerekiyorsa hangi araca soracağını ve hazır prompt'u önerir. Bilgi grafiğine erişemez; derin sorular VS Code'daki oturumda sorulur.</p>
+      <label for="soru" class="label">Soru</label>
+      <textarea id="soru" placeholder="Örn: Sıradaki iş için neye ihtiyacım var? Hangi riskler en acil?"></textarea>
+      <div class="row">
+        <button class="btn" id="sor">Sor</button>
+        <button class="btn ghost" id="dur" hidden>Durdur</button>
+        <span id="sor-not" class="note"></span>
+      </div>
+      <div id="cevap" class="answer" hidden></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="wbs" aria-labelledby="t-wbs" hidden>
+    <div class="box">
+      <h2>İş kırılım yapısı</h2>
+      <p class="note">Takvim yok; ilerleme biten iş paketi sayısıyla ölçülür. Her paketin teslimi ve kabul kriteri WBS sözlüğü yerine geçer.</p>
+      <div id="agac" class="tree"><div class="empty">Henüz iş paketi yok.</div></div>
+    </div>
+    <div class="box">
+      <h2>Bağımlılık sırası</h2>
+      <p class="note">Gantt yerine: her sütundaki işler, soldaki sütunlar bitince açılır.</p>
+      <div id="seviye" class="lanes"></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="pano" aria-labelledby="t-pano" hidden>
+    <p id="pano-not" class="note">Bir kartın durumunu değiştirdiğinde panel ve Claude aynı veriyi görür.</p>
+    <div id="board" class="board"></div>
+  </section>
+
+  <section role="tabpanel" id="kopru" aria-labelledby="t-kopru" hidden>
+    <p class="note">NotebookLM, Rovo veya Manus'ta duran bilgi için hazırlanan sorgular. Prompt'u kopyala, yönlendirmeyi izle, cevabı VS Code'daki oturuma yapıştır; Claude kaydedip kartı kapatır.</p>
+    <div id="bridge" class="bridge"><div class="empty">Bekleyen köprü sorgusu yok.</div></div>
+  </section>
+
+  <section role="tabpanel" id="kaynaklar" aria-labelledby="t-kaynaklar" hidden>
+    <div class="box">
+      <h2>Kaynak kaydı</h2>
+      <div class="scroll"><table><thead><tr><th>Kaynak</th><th>Nerede</th><th>Erişim</th><th>İçerik</th><th>Son eşitleme</th><th>Grafta</th></tr></thead><tbody id="src"></tbody></table></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="paydas" aria-labelledby="t-paydas" hidden>
+    <div class="box">
+      <h2>Paydaş kaydı</h2>
+      <div class="scroll"><table><thead><tr><th>Paydaş</th><th>Rol</th><th>İlgi / Etki</th><th>Beklenti</th><th>İletişim</th></tr></thead><tbody id="sh"></tbody></table></div>
+    </div>
+    <div class="box">
+      <h2>RACI matrisi</h2>
+      <p class="note">R: yapan · A: hesap veren · C: danışılan (bilgi kaynağı) · I: bilgilendirilen</p>
+      <div class="scroll" id="raci"></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="riskler" aria-labelledby="t-riskler" hidden>
+    <div class="grid2">
+      <div class="box">
+        <h2>Olasılık × etki</h2>
+        <p class="note">Açık risklerin sayısı. Sağ üst köşe en acil.</p>
+        <div id="pi" class="pi"></div>
+      </div>
+      <div class="box">
+        <h2>Yanıt stratejileri</h2>
+        <ul class="plain note">
+          <li><b>Kaçın</b>: riski doğuran işi değiştir.</li>
+          <li><b>Azalt</b>: olasılığı ya da etkiyi düşür.</li>
+          <li><b>Aktar</b>: sorumluluğu başka tarafa ver.</li>
+          <li><b>Kabul</b>: izle, gerçekleşirse B planına geç.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="box">
+      <h2>Risk kaydı</h2>
+      <div class="scroll"><table><thead><tr><th>Risk</th><th>O</th><th>E</th><th>Skor</th><th>Yanıt</th><th>Aksiyon</th><th>Durum</th></tr></thead><tbody id="rk"></tbody></table></div>
+    </div>
+  </section>
+
+  <section role="tabpanel" id="kayit" aria-labelledby="t-kayit" hidden>
+    <div class="box">
+      <h2>Kararlar, değişiklikler, dersler</h2>
+      <div id="dec"><div class="empty">Henüz kayıt yok.</div></div>
+    </div>
+  </section>
+</div>
+
+<script>
+const DURUM = { yapilacak: "Yapılacak", yapiliyor: "Yapılıyor", dis_bekliyor: "Dış bilgi bekliyor", bitti: "Bitti" };
+const KOLL = ["charter", "wbs", "bridge", "sources", "stakeholders", "risks", "decisions"];
+const S = Object.fromEntries(KOLL.map(k => [k, []]));
+let db = null, yazabilir = true;
+
+const use = n => window.claude?.use ? claude.use(n) : Promise.resolve(null);
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pill = (d, metin) => `<span class="pill s-${esc(d)}">${esc(metin ?? DURUM[d] ?? d)}</span>`;
+const kodSira = (a, b) => { const x = a.split(".").map(Number), y = b.split(".").map(Number);
+  for (let i = 0; i < Math.max(x.length, y.length); i++) { const d = (x[i] ?? -1) - (y[i] ?? -1); if (d) return d; } return 0; };
+
+/* ---- WBS mantığı ---- */
+function yapraklar(wbs) { const ust = new Set(wbs.map(w => w.ust).filter(Boolean)); return wbs.filter(w => !ust.has(w.kod)); }
+function bagCoz(kod, leaves) { // ebeveyn koda bağımlılık = altındaki tüm yapraklar
+  return leaves.filter(l => l.kod === kod || l.kod.startsWith(kod + ".")).map(l => l.kod); }
+function seviyeler(leaves) {
+  const by = Object.fromEntries(leaves.map(l => [l.kod, l])), memo = {};
+  const d = k => { if (k in memo) return memo[k]; memo[k] = 0; // döngü koruması
+    const deps = (by[k].bagimli || []).flatMap(b => bagCoz(b, leaves)).filter(b => b !== k);
+    return memo[k] = deps.length ? 1 + Math.max(...deps.map(d)) : 0; };
+  const out = []; leaves.forEach(l => (out[d(l.kod)] ??= []).push(l)); return out.filter(Boolean);
+}
+function hazir(leaves) {
+  const by = Object.fromEntries(leaves.map(l => [l.kod, l]));
+  return leaves.filter(l => l.durum !== "bitti" &&
+    (l.bagimli || []).flatMap(b => bagCoz(b, leaves)).every(b => by[b]?.durum === "bitti"))
+    .sort((a, b) => (b.durum === "yapiliyor") - (a.durum === "yapiliyor") || kodSira(a.kod, b.kod));
+}
+
+/* ---- çizim ---- */
+function ciz() {
+  const wbs = [...S.wbs].sort((a, b) => kodSira(a.kod, b.kod)), leaves = yapraklar(wbs);
+  const bitti = leaves.filter(l => l.durum === "bitti").length;
+  const ch = S.charter.find(c => c._id === "main");
+  const bekleyen = S.bridge.filter(b => b.durum !== "cevaplandi");
+  const acikRisk = S.risks.filter(r => r.durum !== "kapali");
+
+  $("asama").textContent = "Aşama: " + (ch?.asama || "—");
+  if (ch?.ozet) $("ozet").textContent = ch.ozet;
+  $("st-ilerleme").textContent = leaves.length ? `${bitti} / ${leaves.length} iş` : "—";
+  $("st-bar").style.width = leaves.length ? (100 * bitti / leaves.length) + "%" : "0";
+  $("st-yapiliyor").textContent = leaves.filter(l => l.durum === "yapiliyor").length;
+  $("st-kopru").textContent = bekleyen.length;
+  $("st-risk").textContent = acikRisk.length;
+  $("c-kopru").textContent = bekleyen.length || "";
+
+  // berat
+  if (ch) $("berat").innerHTML = `
+    ${ch.amac ? `<div><div class="label">Amaç</div><p>${esc(ch.amac)}</p></div>` : ""}
+    ${liste("Kapsam", ch.kapsam)}${liste("Kapsam dışı", ch.kapsam_disi)}
+    ${(ch.basari || []).length ? `<div><div class="label">Başarı ölçütleri</div><ul class="plain">${ch.basari.map(b =>
+      `<li>${esc(b.olcut)} ${b.durum ? pill(b.durum === "karsilandi" ? "bitti" : "yapilacak", b.durum === "karsilandi" ? "Karşılandı" : "Bekliyor") : ""}</li>`).join("")}</ul></div>` : ""}`;
+
+  // sıradaki
+  const h = hazir(leaves).slice(0, 3);
+  $("sirada").innerHTML = leaves.length ? (h.length ? h.map(l => `<div class="chip" style="--c:var(--accent)">
+      <span><span class="mono">${esc(l.kod)}</span> ${esc(l.ad)}</span>${l.teslim ? `<span class="muted">Teslim: ${esc(l.teslim)}</span>` : ""}
+      <span>${pill(l.durum)}</span></div>`).join("") : `<div class="empty">Açık iş kalmadı ya da hepsi bir bağımlılığı bekliyor.</div>`)
+    : `<div class="empty">İş kırılım yapısı eklenince burada görünür.</div>`;
+
+  // ağaç
+  const yaprakSet = new Set(leaves.map(l => l.kod));
+  $("agac").innerHTML = wbs.length ? wbs.map(w => {
+    const derin = w.kod.split(".").length - 1, yaprak = yaprakSet.has(w.kod);
+    const alt = leaves.filter(l => l.kod.startsWith(w.kod + "."));
+    const sag = yaprak ? pill(w.durum || "yapilacak") : `<span class="mono muted">${alt.filter(l => l.durum === "bitti").length}/${alt.length}</span>`;
+    return `<div class="node ${yaprak ? "" : "parent"}" style="padding-left:${derin * 20}px">
+      <span class="kod">${esc(w.kod)}</span><span class="ad">${esc(w.ad)}</span>${sag}
+      ${yaprak && (w.teslim || w.kabul || (w.bagimli || []).length || w.not) ? `<div class="det">
+        ${w.teslim ? `<span><b>Teslim:</b> ${esc(w.teslim)}</span>` : ""}
+        ${w.kabul ? `<span><b>Kabul:</b> ${esc(w.kabul)}</span>` : ""}
+        ${(w.bagimli || []).length ? `<span><b>Önce:</b> <span class="mono">${w.bagimli.map(esc).join(", ")}</span></span>` : ""}
+        ${w.not ? `<span>${esc(w.not)}</span>` : ""}</div>` : ""}</div>`; }).join("")
+    : `<div class="empty">Henüz iş paketi yok.</div>`;
+
+  // bağımlılık sırası
+  const renk = { yapilacak: "var(--idle)", yapiliyor: "var(--accent)", dis_bekliyor: "var(--warn)", bitti: "var(--ok)" };
+  $("seviye").innerHTML = seviyeler(leaves).map((grup, i) => `<div class="lane"><div class="label">Sıra ${i + 1}</div>
+    ${grup.map(l => `<div class="chip" style="--c:${renk[l.durum] || renk.yapilacak}"><span class="mono">${esc(l.kod)}</span><span>${esc(l.ad)}</span></div>`).join("")}</div>`).join("");
+
+  // pano
+  $("board").innerHTML = Object.entries(DURUM).map(([k, ad]) => {
+    const kart = leaves.filter(l => (l.durum || "yapilacak") === k);
+    return `<div class="col"><h3>${esc(ad)} <span class="mono muted">${kart.length}</span></h3>
+      ${kart.map(l => `<div class="card"><span><span class="mono">${esc(l.kod)}</span> ${esc(l.ad)}</span>
+        ${l.raci?.R ? `<span class="note">Yapan: ${esc(l.raci.R)}</span>` : ""}
+        <select id="d-${esc(l._id)}" aria-label="${esc(l.kod)} durumu" data-id="${esc(l._id)}" ${yazabilir ? "" : "disabled"}>
+          ${Object.entries(DURUM).map(([v, t]) => `<option value="${v}" ${v === k ? "selected" : ""}>${t}</option>`).join("")}</select></div>`).join("")}
+      ${kart.length ? "" : `<div class="note">Boş</div>`}</div>`; }).join("");
+
+  // köprü
+  const kopru = [...S.bridge].sort((a, b) => (a.durum === "cevaplandi") - (b.durum === "cevaplandi") || String(b.tarih).localeCompare(String(a.tarih)));
+  $("bridge").innerHTML = kopru.length ? kopru.map(b => {
+    const ic = `<div class="bhead"><span class="tool">${esc(b.hedef)}</span>${b.yer ? `<span class="muted">${esc(b.yer)}</span>` : ""}
+        ${pill(b.durum || "bekliyor", b.durum === "cevaplandi" ? "Cevaplandı" : "Bekliyor")}${b.wbs ? `<span class="mono muted">WBS ${esc(b.wbs)}</span>` : ""}</div>
+      ${b.neden ? `<p><b>Neden:</b> ${esc(b.neden)}</p>` : ""}
+      ${(b.yonlendirme || []).length ? `<div><div class="label">Yönlendirme</div><ol class="steps">${b.yonlendirme.map(s => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}
+      <div class="prompt"><div class="bhead" style="justify-content:space-between"><span class="label">Prompt</span>
+        <button class="btn ghost" data-copy="${esc(b._id)}">Kopyala</button></div><pre id="p-${esc(b._id)}">${esc(b.prompt)}</pre></div>
+      ${b.beklenen ? `<p class="note"><b>Beklenen cevap:</b> ${esc(b.beklenen)}</p>` : ""}
+      ${b.dosya ? `<p class="note">Kaydedildi: <span class="mono">${esc(b.dosya)}</span></p>` : ""}`;
+    return b.durum === "cevaplandi"
+      ? `<details class="bcard"><summary>${esc(b.hedef)}: ${esc(b.neden || b.yer || "")}</summary>${ic}</details>`
+      : `<article class="bcard">${ic}</article>`; }).join("") : `<div class="empty">Bekleyen köprü sorgusu yok.</div>`;
+
+  // kaynaklar
+  $("src").innerHTML = S.sources.length ? S.sources.map(s => `<tr><td><b>${esc(s.ad)}</b></td><td>${esc(s.yer)}</td><td>${esc(s.erisim)}</td>
+    <td>${esc(s.icerik)}</td><td class="num">${esc(s.son_esitleme || "—")}</td><td>${s.grafta ? pill("bitti", "Evet") : pill("yapilacak", "Hayır")}</td></tr>`).join("")
+    : `<tr><td colspan="6" class="muted">Kaynak kaydı boş.</td></tr>`;
+
+  // paydaşlar
+  $("sh").innerHTML = S.stakeholders.length ? S.stakeholders.map(s => `<tr><td><b>${esc(s.ad)}</b></td><td>${esc(s.rol)}</td>
+    <td>${esc(s.ilgi)} / ${esc(s.etki)}</td><td>${esc(s.beklenti)}</td><td>${esc(s.iletisim)}</td></tr>`).join("")
+    : `<tr><td colspan="5" class="muted">Paydaş kaydı boş.</td></tr>`;
+
+  // RACI
+  const raciL = leaves.filter(l => l.raci);
+  const aktor = [...new Set(raciL.flatMap(l => [l.raci.R, l.raci.A, ...(l.raci.C || []), ...(l.raci.I || [])]).filter(Boolean))];
+  const harf = (l, a) => [l.raci.R === a && "R", l.raci.A === a && "A", (l.raci.C || []).includes(a) && "C", (l.raci.I || []).includes(a) && "I"].filter(Boolean).join("");
+  $("raci").innerHTML = raciL.length ? `<table class="raci"><thead><tr><th>İş paketi</th>${aktor.map(a => `<th>${esc(a)}</th>`).join("")}</tr></thead>
+    <tbody>${raciL.map(l => `<tr><td><span class="mono">${esc(l.kod)}</span> ${esc(l.ad)}</td>${aktor.map(a => `<td class="c">${harf(l, a)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
+    : `<div class="empty">İş paketlerine sorumlular atanınca matris oluşur.</div>`;
+
+  // risk matrisi
+  let pi = `<div class="ax"></div>${[1, 2, 3, 4, 5].map(o => `<div class="ax">O${o}</div>`).join("")}`;
+  for (let e = 5; e >= 1; e--) {
+    pi += `<div class="ax">E${e}</div>`;
+    for (let o = 1; o <= 5; o++) {
+      const n = acikRisk.filter(r => +r.olasilik === o && +r.etki === e).length, sk = o * e;
+      pi += `<div class="${sk >= 15 ? "z-hi" : sk >= 8 ? "z-md" : "z-lo"}${n ? " has" : ""}" title="Olasılık ${o}, etki ${e}">${n || ""}</div>`;
+    }
+  }
+  $("pi").innerHTML = pi;
+  $("rk").innerHTML = S.risks.length ? [...S.risks].sort((a, b) => (a.durum === "kapali") - (b.durum === "kapali") || b.olasilik * b.etki - a.olasilik * a.etki)
+    .map(r => `<tr><td>${esc(r.risk)}</td><td class="num">${esc(r.olasilik)}</td><td class="num">${esc(r.etki)}</td><td class="num"><b>${r.olasilik * r.etki || "—"}</b></td>
+      <td>${esc(r.yanit)}</td><td>${esc(r.aksiyon)}</td><td>${pill(r.durum === "kapali" ? "kapali" : "acik", r.durum === "kapali" ? "Kapalı" : "Açık")}</td></tr>`).join("")
+    : `<tr><td colspan="7" class="muted">Risk kaydı boş.</td></tr>`;
+
+  // kayıtlar
+  const TUR = { karar: "Karar", degisiklik: "Değişiklik", ders: "Ders" };
+  $("dec").innerHTML = S.decisions.length ? `<div class="scroll"><table><thead><tr><th>Tarih</th><th>Tür</th><th>Başlık</th><th>Gerekçe</th><th>Etki</th></tr></thead><tbody>${
+    [...S.decisions].sort((a, b) => String(b.tarih).localeCompare(String(a.tarih))).map(d => `<tr><td class="num">${esc(d.tarih)}</td>
+      <td>${esc(TUR[d.tur] || d.tur)}</td><td><b>${esc(d.baslik)}</b></td><td>${esc(d.gerekce)}</td><td>${esc(d.etki)}</td></tr>`).join("")}</tbody></table></div>`
+    : `<div class="empty">Henüz kayıt yok.</div>`;
+}
+const liste = (baslik, arr) => (arr || []).length ? `<div><div class="label">${esc(baslik)}</div><ul class="plain">${arr.map(x => `<li>${esc(x)}</li>`).join("")}</ul></div>` : "";
+
+/* ---- sekmeler ---- */
+const sekmeler = [...document.querySelectorAll('[role="tab"]')];
+function sec(id) {
+  if (!$(id)) id = "genel";
+  sekmeler.forEach(t => { const on = t.getAttribute("aria-controls") === id; t.setAttribute("aria-selected", on); t.tabIndex = on ? 0 : -1; $(t.getAttribute("aria-controls")).hidden = !on; });
+}
+sekmeler.forEach(t => t.addEventListener("click", () => { const id = t.getAttribute("aria-controls"); sec(id); history.replaceState(null, "", "#" + id); }));
+addEventListener("hashchange", () => sec(location.hash.slice(1)));
+sec(location.hash.slice(1));
+
+/* ---- etkileşim ---- */
+document.addEventListener("change", async e => {
+  const id = e.target.dataset?.id; if (!id || !db) return;
+  e.target.disabled = true;
+  try { await db.doc("wbs/" + id).update({ durum: e.target.value }); $("pano-not").className = "note"; $("pano-not").textContent = "Kaydedildi."; }
+  catch (err) {
+    if (err.code === "invalid_argument") { yazabilir = false; ciz(); }
+    $("pano-not").className = "note err";
+    $("pano-not").textContent = err.code === "invalid_argument" ? "Bu panelde durum değiştirme yetkin yok." : "Kaydedilemedi, birazdan tekrar dene.";
+  }
+});
+document.addEventListener("click", async e => {
+  const id = e.target.dataset?.copy; if (!id) return;
+  const pre = $("p-" + id);
+  try { await navigator.clipboard.writeText(pre.textContent); e.target.textContent = "Kopyalandı"; }
+  catch { getSelection().selectAllChildren(pre); e.target.textContent = "Seçildi, Ctrl+C"; }
+  setTimeout(() => (e.target.textContent = "Kopyala"), 2000);
+});
+
+/* ---- Claude'a sor ---- */
+const SOR_HATA = { not_granted: null, sampling_disabled: null, not_declared: null, capability_disabled: null, capability_removed: null,
+  rate_limited: "Şu an çok fazla istek var, biraz sonra tekrar dene.", session_expired: "Oturum süresi dolmuş, claude.ai'de yeniden giriş yap.",
+  refused: "Claude bu soruyu cevaplamadı; soruyu değiştirip dene.", empty_completion: "Boş cevap geldi; soruyu sadeleştir.",
+  prompt_too_large: "Panel verisi bu soru için fazla büyük.", upstream_error: "Bağlantı kesildi, tekrar dene." };
+let ctl = null;
+async function sorKur() {
+  const sample = await use("sample");
+  if (!sample) { $("sor").disabled = true; $("sor-not").textContent = "Bu görünümde Claude'a soru sorulamıyor."; return; }
+  $("dur").onclick = () => ctl?.abort();
+  $("sor").onclick = async () => {
+    const q = $("soru").value.trim(); if (!q) { $("soru").focus(); return; }
+    ctl = new AbortController(); $("sor").disabled = true; $("dur").hidden = false; $("sor-not").textContent = "";
+    $("cevap").hidden = false; $("cevap").textContent = "Düşünüyor…";
+    const veri = JSON.stringify(Object.fromEntries(KOLL.map(k => [k, S[k].map(({ _id, ...r }) => r)])));
+    const prompt = `Sen NexusOS projesinin proje yöneticisi asistanısın. Proje PMBOK araçlarıyla, takvimsiz ve iş bazlı yürütülüyor.
+Bilgi kaynakları: Google Drive, NotebookLM, Manus çıktıları, yerel PDF ödevler ve Jira/Confluence (yalnızca Rovo ile erişiliyor).
+Kurallar: Yalnızca aşağıdaki panel verisine dayan; uydurma. Cevap panelde yoksa bunu söyle, bilginin hangi kaynakta olabileceğini belirt ve o araca yapıştırılacak kısa, kopyalanabilir bir prompt öner. Türkçe, kısa ve madde madde yaz. Markdown başlığı kullanma.
+
+PANEL VERİSİ (JSON):
+${veri}
+
+SORU: ${q}`;
+    try { await sample(prompt, { signal: ctl.signal, cache: false, onText: ({ text }) => ($("cevap").textContent = text) }); }
+    catch (err) {
+      $("cevap").textContent = err.text ?? "";
+      if (err.code in SOR_HATA && SOR_HATA[err.code] === null) { $("sor").disabled = true; $("sor-not").textContent = "Bu görünümde Claude'a soru sorulamıyor."; return; }
+      if (err.code !== "cancelled") $("sor-not").textContent = SOR_HATA[err.code] || SOR_HATA.upstream_error;
+      if (!$("cevap").textContent) $("cevap").hidden = true;
+    } finally { if (!$("sor-not").textContent.startsWith("Bu görünümde")) $("sor").disabled = false; $("dur").hidden = true; }
+  };
+}
+
+/* ---- veri ---- */
+(async () => {
+  db = await use("db");
+  if (!db) { $("durum").textContent = "Veritabanı bu görünümde açılamadı. Paneli claude.ai'de oturum açıkken görüntüle."; $("durum").className = "note err"; return; }
+  const user = await use("user");
+  if (user && (await user.can("data.write")) === false) yazabilir = false;
+  let gelen = 0;
+  KOLL.forEach(k => db.collection(k).onSnapshot(snap => {
+    S[k] = snap.docs.map(d => ({ _id: d.id, ...d.data() }));
+    if (k === "wbs") S.wbs.forEach(w => (w.kod ??= w._id));
+    if (++gelen >= KOLL.length) $("durum").textContent = "Canlı · son güncelleme " + new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+    ciz();
+  }, err => { $("durum").className = "note err"; $("durum").textContent = "Bağlantı koptu; sayfayı yenile."; }));
+})();
+sorKur();
+ciz();
+</script>

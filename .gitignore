@@ -1,0 +1,12 @@
+# büyük / üretilen
+node_modules/
+demo/arsiv/explorviz/explorviz-frontend/
+demo/arsiv/explorviz/explorviz-mock/
+demo/services/events.jsonl
+__pycache__/
+graphify-out/cache/
+kaynaklar/graphify-out/
+*.mp4
+*.zip
+# oturum kaydı içerir (kullanıcı mesajları)
+demo/agents/timeline.json

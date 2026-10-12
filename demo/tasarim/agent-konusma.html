@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusOS · Agent konuşma önerileri</title>
+<style>
+  :root { --bg:#070b14; --fg:#cfe3ff; --dim:#6b7fa3; --acc:#4fd1ff; --err:#ff4d5e; --ok:#6ee7a0; --card:#0d1628; --line:#22355a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.5 system-ui,sans-serif; }
+  h1 { font-size:18px; letter-spacing:.06em; margin:20px 24px 2px; } .lead { margin:0 24px 14px; color:var(--dim); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(440px,1fr)); gap:16px; padding:0 24px 28px; }
+  .k { background:var(--card); border:1px solid var(--line); border-radius:14px; overflow:hidden; display:flex; flex-direction:column; }
+  .k h2 { margin:0; padding:12px 16px 0; font-size:15px; } .k h2 small { color:var(--dim); font-weight:400; }
+  .st { position:relative; height:300px; margin:10px 16px; border-radius:10px; background:radial-gradient(circle at 50% 30%,#10203c,#05080f 75%); border:1px solid #16233f; overflow:hidden; font-size:12px; }
+  ul { margin:0; padding:0 16px 14px 32px; } li { margin:2px 0; }
+  li.a::marker { content:"+ "; color:var(--ok); } li.z::marker { content:"− "; color:var(--err); }
+  .sec { padding:0 16px 12px; color:var(--dim); font-size:12px; }
+  .ag { --c:#4fd1ff; } .m { --c:#ffb84d; } .an { --c:#6ee7a0; } .t { --c:#c792ff; } .ka { --c:#ff8bd0; } .r { --c:#ff7a7a; }
+  .dot { display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--c); margin-right:5px; }
+  button.play { margin:0 16px 10px; align-self:flex-start; background:#12223f; color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:3px 12px; cursor:pointer; }
+  /* 1 chat */
+  .chat { padding:8px; overflow:auto; height:100%; display:flex; flex-direction:column; gap:6px; }
+  .msg { border-left:3px solid var(--c); background:#0d1a30; padding:4px 8px; border-radius:6px; animation:in .4s; }
+  .msg b { color:var(--c); } .msg .tool { color:var(--dim); } @keyframes in { from { opacity:0; transform:translateY(6px);} }
+  /* 2 bubbles */
+  .bub { position:absolute; max-width:44%; background:#0d1628ee; border:1px solid var(--c); border-radius:10px; padding:4px 8px; animation:in .4s; }
+  .stn { position:absolute; width:26%; height:22%; border:1px dashed #2b4a7a; border-radius:8px; color:var(--dim); padding:2px 6px; }
+  /* 3 lanes */
+  .lane { position:absolute; left:0; right:0; height:16%; border-bottom:1px solid #16233f; }
+  .lane > span { position:absolute; left:6px; top:2px; color:var(--c); }
+  .pill { position:absolute; height:70%; top:15%; background:color-mix(in srgb,var(--c) 25%,#0d1628); border:1px solid var(--c); border-radius:6px; padding:0 4px; white-space:nowrap; overflow:hidden; font-size:10px; line-height:18px; animation:in .4s; }
+  /* 4 graph */
+  svg text { fill:var(--fg); font-size:11px; } .node { fill:#13203a; stroke:var(--c); stroke-width:2; }
+  /* 5 focus */
+  .spk { position:absolute; left:6%; right:6%; top:6%; height:50%; border:1px solid var(--c); border-radius:12px; background:#0d1a30; padding:10px 14px; box-shadow:0 0 18px color-mix(in srgb,var(--c) 40%,transparent); }
+  .spk big { font-size:15px; display:block; margin-top:6px; }
+  .thumbs { position:absolute; left:6%; right:6%; bottom:6%; display:flex; gap:6px; }
+  .th { flex:1; border:1px solid #22355a; border-radius:8px; padding:4px 6px; background:#0b1426; color:var(--dim); overflow:hidden; height:62px; font-size:10px; }
+  .th.on { border-color:var(--c); color:var(--fg); }
+</style>
+</head>
+<body>
+<h1>NEXUSOS · AGENT KONUŞMA ÖNERİLERİ</h1>
+<p class="lead">Beş farklı gösterim, aynı veri: telekom satış senaryosunun ilk 16 olayı (<code>demo/agents/telekom.json</code>). "▶ oynat" ile akışı baştan izle.</p>
+<div class="grid" id="g"></div>
+<script>
+const EV = [{"t": 1.0, "agent": "müşteri", "kind": "user", "station": "musteri", "text": "Faturam 510 TL, rakip 420 TL teklif etti"}, {"t": 2.0, "agent": "orkestratör", "kind": "say", "station": "meeting", "text": "Müşteri kayıp riski: satış ekibini topluyorum"}, {"t": 3.0, "agent": "orkestratör", "kind": "spawn", "station": "meeting", "text": "analiz agent'ı göreve", "child": "analiz"}, {"t": 4.0, "agent": "orkestratör", "kind": "spawn", "station": "meeting", "text": "teklif agent'ı göreve", "child": "teklif"}, {"t": 5.0, "agent": "orkestratör", "kind": "spawn", "station": "meeting", "text": "kampanya agent'ı göreve", "child": "kampanya"}, {"t": 6.0, "agent": "orkestratör", "kind": "spawn", "station": "meeting", "text": "risk agent'ı göreve", "child": "risk"}, {"t": 7.0, "agent": "analiz", "kind": "tool", "station": "crm", "text": "CRM: abonelik ve son 6 ay kullanım"}, {"t": 8.0, "agent": "analiz", "kind": "say", "station": "crm", "text": "Ortalama 25 GB kullanıyor, ödemeleri düzenli"}, {"t": 9.0, "agent": "analiz", "kind": "report", "station": "meeting", "text": "bulgular orkestratöre"}, {"t": 10.0, "agent": "teklif", "kind": "tool", "station": "katalog", "text": "Katalog taraması: 25 GB için uygun tarifeler"}, {"t": 11.0, "agent": "teklif", "kind": "say", "station": "katalog", "text": "Önerim: Ultra 40 GB (449 TL)"}, {"t": 12.0, "agent": "teklif", "kind": "report", "station": "meeting", "text": "tarife önerisi orkestratöre"}, {"t": 13.0, "agent": "kampanya", "kind": "tool", "station": "kampanya", "text": "Rakibin altına inmek için %11 indirim deniyorum"}, {"t": 14.0, "agent": "kampanya", "kind": "say", "station": "kampanya", "text": "Yeni fiyat 400 TL, marj içinde"}, {"t": 15.0, "agent": "kampanya", "kind": "report", "station": "meeting", "text": "kampanya kararı orkestratöre"}, {"t": 16.0, "agent": "müşteri", "kind": "user", "station": "musteri", "text": "Yanında yeni telefon da alabilir miyim?"}];
+const CLS = { "müşteri":"ag", "orkestratör":"m", "analiz":"an", "teklif":"t", "kampanya":"ka", "risk":"r" };
+const ICON = { user:"👤", say:"💬", tool:"🔧", spawn:"✨", report:"📨" };
+const esc = s => String(s).replace(/[<&>]/g, c => ({ "<":"&lt;", "&":"&amp;", ">":"&gt;" }[c]));
+const agents = [...new Set(EV.map(e => e.agent))];
+const cls = a => CLS[a] || "ag";
+
+const V = [
+{ ad:"Birleşik akış", alt:"tek sütun, sohbet gibi",
+  draw(el, n) { el.innerHTML = `<div class="chat">${EV.slice(0, n).map(e => `<div class="msg ${cls(e.agent)}"><b>${e.agent}</b> ${ICON[e.kind]} ${e.kind === "tool" ? `<span class="tool">${esc(e.text)}</span>` : esc(e.text)}</div>`).join("")}</div>`; el.firstChild.scrollTop = 1e5; },
+  a:["Claude vb. sohbet arayüzlerine benzer, herkes tanır","Okunabilir; tüm geçmiş kaydırılır","Yapması en kolay, metin aranabilir"],
+  z:["Görsel olarak 'başka' değil; fütüristik iddiaya ters","Kim kime konuşuyor görünmez, hepsi alt alta","Agent sayısı artınca akış karışır"] },
+{ ad:"Sahne balonları", alt:"mevcut Ç3 ofisi: istasyonda konuşma",
+  draw(el, n) {
+    const pos = { musteri:[4,70], meeting:[38,10], crm:[70,10], katalog:[70,40], kampanya:[70,70], risk:[4,10] };
+    let h = Object.entries(pos).map(([k, [x, y]]) => `<div class="stn" style="left:${x}%;top:${y}%">${k}</div>`).join("");
+    const last = {}; EV.slice(0, n).forEach(e => last[e.station] = e);
+    h += Object.entries(last).map(([s, e]) => { const [x, y] = pos[s] || [40, 40]; return `<div class="bub ${cls(e.agent)}" style="left:${Math.min(x, 52)}%;top:${y + 12}%;--c:var(--c)"><span class="dot ${cls(e.agent)}"></span><b>${e.agent}</b><br>${esc(e.text)}</div>`; }).join("");
+    el.innerHTML = h; },
+  a:["Zaten çalışıyor (demo/agents), mekân hissi var","Kim nerede ne yapıyor bir bakışta","Sunum için etkileyici"],
+  z:["Aynı istasyonda iki konuşma üst üste biner","Uzun metin balona sığmaz","Geçmişi okumak zor, sadece son söz görünür"] },
+{ ad:"Yüzme şeritleri", alt:"her agent bir şerit, zamanda mesajlar",
+  draw(el, n) {
+    const ags = agents.slice(0, 6), H = 100 / ags.length;
+    let h = ags.map((a, i) => `<div class="lane ${cls(a)}" style="top:${i * H}%;height:${H}%"><span>${a}</span></div>`).join("");
+    h += EV.slice(0, n).map((e, i) => { const r = ags.indexOf(e.agent); return `<div class="pill ${cls(e.agent)}" style="top:calc(${r * H}% + 12%);height:${H * .7}%;left:${22 + i * 4.5}%;max-width:24%;position:absolute">${ICON[e.kind]} ${esc(e.text)}</div>`; }).join("");
+    el.innerHTML = h; },
+  a:["Paralel çalışma net görünür (kim aynı anda ne yapıyor)","Zaman ekseni ve geçmiş hep görünür","Spawn ve rapor okları eklenebilir"],
+  z:["Çok agent'ta yatay taşar","Metin kırpılır, dokunup açmak gerekir","Konuşma değil iş akışı gibi hissettirir"] },
+{ ad:"Ağ grafiği", alt:"agent düğüm, mesaj akan paket",
+  draw(el, n) {
+    const P = { "müşteri":[60,150], "orkestratör":[200,150], "analiz":[340,50], "teklif":[340,150], "kampanya":[340,250], "risk":[200,250] };
+    const last = {}; EV.slice(0, n).forEach(e => last[e.agent] = e);
+    let s = `<svg viewBox="0 0 420 300" width="100%" height="100%">`;
+    for (const a of ["analiz","teklif","kampanya","risk","müşteri"]) s += `<line x1="${P["orkestratör"][0]}" y1="${P["orkestratör"][1]}" x2="${P[a][0]}" y2="${P[a][1]}" stroke="#2b4a7a" stroke-dasharray="3 5"/>`;
+    for (const [a, [x, y]] of Object.entries(P)) { const e = last[a];
+      s += `<g class="${cls(a)}"><circle class="node" cx="${x}" cy="${y}" r="${e ? 22 : 14}" opacity="${e ? 1 : .4}"/><text x="${x}" y="${y + 4}" text-anchor="middle">${a}</text>`;
+      if (e) s += `<text x="${x}" y="${y + 40}" text-anchor="middle" style="fill:#9fc4ff;font-size:10px">${esc(e.text.slice(0, 34))}${e.text.length > 34 ? "…" : ""}</text>`; s += `</g>`; }
+    el.innerHTML = s + `</svg>`; },
+  a:["İlişki görünür: kim kime görev ve rapor veriyor","Servis trafiği (Ç2) diliyle aynı, bütünlük sağlar","Fütüristik, soyut"],
+  z:["Konuşma metni düğüm altına sığmaz, kısaltılır","Geçmiş yok, yalnız son söz","Çok agent'ta düğümler üst üste biner"] },
+{ ad:"Konuşan öne çıkar", alt:"video toplantı düzeni",
+  draw(el, n) {
+    const e = EV[n - 1] || EV[0], seen = {}; EV.slice(0, n).forEach(x => seen[x.agent] = x);
+    el.innerHTML = `<div class="spk ${cls(e.agent)}"><span class="dot ${cls(e.agent)}"></span><b>${e.agent}</b> <span style="color:var(--dim)">${ICON[e.kind]} ${e.kind}</span><big>${esc(e.text)}</big></div><div class="thumbs">${agents.map(a => `<div class="th ${cls(a)} ${a === e.agent ? "on" : ""}"><span class="dot ${cls(a)}"></span>${a}<br>${seen[a] ? esc(seen[a].text.slice(0, 40)) : "—"}</div>`).join("")}</div>`; },
+  a:["Dikkat tek yere: kim konuşuyorsa o büyük","Herkes tanır (toplantı uygulamaları), öğrenme yok","Her agent'ın son sözü kenarda durur"],
+  z:["Paralel çalışmayı göstermez","Çok hızlı akışta ekran sürekli yer değiştirir","Kod ve servis görünümüyle bağı yok"] },
+];
+const g = document.getElementById("g");
+V.forEach((v, i) => {
+  const c = document.createElement("section"); c.className = "k";
+  c.innerHTML = `<h2>${i + 1}. ${v.ad} <small>· ${v.alt}</small></h2><div class="st"></div><button class="play">▶ oynat</button><ul>${v.a.map(t => `<li class="a">${t}</li>`).join("")}${v.z.map(t => `<li class="z">${t}</li>`).join("")}</ul>`;
+  g.append(c);
+  const st = c.querySelector(".st"); let tm;
+  v.draw(st, EV.length);
+  c.querySelector(".play").onclick = () => { clearInterval(tm); let n = 0; tm = setInterval(() => { v.draw(st, ++n); if (n >= EV.length) clearInterval(tm); }, 700); };
+});
+</script>
+</body>
+</html>

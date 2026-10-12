@@ -1,0 +1,271 @@
+<title>NexusOS Pano</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Düzen: dar tek sütun, üstte sekme şeridi; "Şu an" bir komuta masası, "İşler" iki liste, "Demolar" kart ızgarası. */
+:root {
+  --bg: #f3f5f7; --yuzey: #ffffff; --cizgi: #d9dee5; --yazi: #17202b; --soluk: #5d6b7c;
+  --vurgu: #0b7f8a; --vurgu-zemin: #e1f2f3;
+  --karar: #a35a00; --karar-zemin: #fdf0dc; --bekle: #6a4fb3; --bekle-zemin: #eee9fa;
+  --tamam: #2d7a3e; --tamam-zemin: #e3f2e6;
+  --f-baslik: "Sora", "Segoe UI", system-ui, sans-serif;
+  --f-govde: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-kod: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0c1117; --yuzey: #131a22; --cizgi: #243040; --yazi: #e2e9f1; --soluk: #8b99ab;
+  --vurgu: #3fc6d1; --vurgu-zemin: #10303a;
+  --karar: #f0a94a; --karar-zemin: #33240f; --bekle: #b49cf2; --bekle-zemin: #251d3a;
+  --tamam: #6fcf83; --tamam-zemin: #13291a; color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0c1117; --yuzey: #131a22; --cizgi: #243040; --yazi: #e2e9f1; --soluk: #8b99ab;
+  --vurgu: #3fc6d1; --vurgu-zemin: #10303a;
+  --karar: #f0a94a; --karar-zemin: #33240f; --bekle: #b49cf2; --bekle-zemin: #251d3a;
+  --tamam: #6fcf83; --tamam-zemin: #13291a; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--yazi); font: 15px/1.55 var(--f-govde); padding: 0 16px 48px; }
+.kap { max-width: 920px; margin: 0 auto; }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 16px; padding-block: 22px 12px; }
+h1 { font: 600 22px/1.2 var(--f-baslik); margin: 0; letter-spacing: -.01em; }
+h1 small { font: 500 13px var(--f-kod); color: var(--soluk); margin-left: 8px; letter-spacing: 0; }
+h2 { font: 600 17px/1.3 var(--f-baslik); margin: 0; text-wrap: balance; }
+h3 { font: 600 12px/1 var(--f-govde); text-transform: uppercase; letter-spacing: .08em; color: var(--soluk); margin: 0; }
+.durum { font: 12px var(--f-kod); color: var(--soluk); }
+.durum.err { color: var(--karar); }
+nav { display: flex; gap: 4px; border-bottom: 1px solid var(--cizgi); position: sticky; top: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 2; overflow-x: auto; }
+nav button { font: 500 14px var(--f-govde); color: var(--soluk); background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; cursor: pointer; white-space: nowrap; }
+nav button[aria-selected="true"] { color: var(--yazi); border-color: var(--vurgu); }
+nav button .say { font: 500 11px var(--f-kod); background: var(--karar-zemin); color: var(--karar); border-radius: 9px; padding: 1px 6px; margin-left: 6px; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
+section.sekme { display: grid; gap: 28px; padding-top: 22px; }
+.kart { background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
+.soluk { color: var(--soluk); }
+.kod { font: 500 12px var(--f-kod); color: var(--soluk); font-variant-numeric: tabular-nums; }
+.etiket { display: inline-block; font: 500 11.5px/1 var(--f-govde); padding: 4px 8px; border-radius: 6px; white-space: nowrap; }
+.e-yapilacak { background: var(--cizgi); color: var(--yazi); }
+.e-yapiliyor { background: var(--vurgu-zemin); color: var(--vurgu); }
+.e-bekliyor { background: var(--bekle-zemin); color: var(--bekle); }
+.e-karar { background: var(--karar-zemin); color: var(--karar); }
+.e-bitti { background: var(--tamam-zemin); color: var(--tamam); }
+p { margin: 0; }
+
+/* Şu an */
+.adim { border-color: var(--vurgu); }
+.adim .ust { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.ilerleme { display: flex; align-items: center; gap: 10px; font: 12px var(--f-kod); color: var(--soluk); }
+.cubuk { width: 140px; height: 6px; background: var(--cizgi); border-radius: 3px; overflow: hidden; }
+.cubuk i { display: block; height: 100%; background: var(--tamam); }
+.aksiyon { border-left: 3px solid var(--karar); }
+.aksiyon.cevapli { border-left-color: var(--tamam); }
+.secenekler { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+.secenek { text-align: left; font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--cizgi); border-radius: 8px; padding: 10px 12px; cursor: pointer; display: grid; gap: 4px; min-width: 0; }
+.secenek:hover { border-color: var(--vurgu); }
+.secenek[aria-pressed="true"] { border-color: var(--tamam); background: var(--tamam-zemin); }
+.secenek b { font-weight: 600; }
+.secenek .soluk { font-size: 13.5px; }
+.secenek a { font-size: 13px; color: var(--vurgu); }
+.oneri { font: 500 10.5px var(--f-govde); color: var(--vurgu); text-transform: uppercase; letter-spacing: .06em; }
+.not-satir { display: flex; gap: 8px; }
+.not-satir input { flex: 1; min-width: 0; font: inherit; font-size: 14px; color: var(--yazi); background: var(--bg); border: 1px solid var(--cizgi); border-radius: 6px; padding: 7px 10px; }
+.kayit { font: 12px var(--f-kod); color: var(--tamam); }
+ol.sonra { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+
+/* İşler */
+.liste { display: grid; gap: 10px; }
+.is { display: grid; grid-template-columns: 44px 1fr; gap: 4px 12px; }
+.is .bas { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.is .bas b { font-weight: 600; }
+.is .detay { grid-column: 2; display: grid; gap: 6px; font-size: 14px; }
+.is .satir { display: grid; grid-template-columns: 112px 1fr; gap: 8px; }
+.is .satir span:first-child { color: var(--soluk); font-size: 12.5px; padding-top: 1px; }
+.is .satir.karar span:last-child { color: var(--karar); font-weight: 500; }
+.yapildi { padding: 12px 18px; }
+.yapildi .detay { color: var(--soluk); }
+code { font: 12.5px var(--f-kod); background: var(--bg); border: 1px solid var(--cizgi); border-radius: 4px; padding: 0 4px; overflow-wrap: anywhere; }
+
+/* Demolar */
+.demolar { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+.demo { padding: 0; overflow: hidden; gap: 0; align-content: start; }
+.demo img { display: block; width: 100%; aspect-ratio: 16/9; object-fit: cover; object-position: top; background: var(--cizgi); border-bottom: 1px solid var(--cizgi); }
+.demo .ic { padding: 14px 16px 16px; display: grid; gap: 8px; }
+.demo .bas { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.baglar { display: flex; flex-wrap: wrap; gap: 6px; }
+.baglar a, .baglar button { font: 500 13px var(--f-govde); color: var(--vurgu); background: var(--vurgu-zemin); border: 0; border-radius: 6px; padding: 5px 10px; text-decoration: none; cursor: pointer; }
+.komut { display: flex; gap: 6px; align-items: stretch; }
+.komut code { flex: 1; padding: 6px 8px; display: block; }
+.komut button { font: 500 12px var(--f-govde); background: none; border: 1px solid var(--cizgi); color: var(--soluk); border-radius: 6px; cursor: pointer; padding: 0 8px; }
+.onizleme { border: 1px solid var(--cizgi); border-radius: 10px; overflow: hidden; background: #000; }
+.onizleme .ust { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--yuzey); gap: 8px; }
+.onizleme iframe { display: block; width: 100%; height: min(70vh, 640px); border: 0; }
+.bilgi { font-size: 13.5px; color: var(--soluk); background: var(--yuzey); border: 1px dashed var(--cizgi); border-radius: 8px; padding: 10px 14px; }
+.bos { color: var(--soluk); font-size: 14px; padding: 18px; border: 1px dashed var(--cizgi); border-radius: 10px; }
+@media (max-width: 560px) { .is { grid-template-columns: 1fr; } .is .detay { grid-column: 1; } .is .satir { grid-template-columns: 1fr; gap: 0; } }
+@media (prefers-reduced-motion: no-preference) { .secenek, nav button { transition: border-color .15s, background .15s; } }
+</style>
+
+<div class="kap">
+  <header>
+    <h1>NexusOS <small>Ar-Ge görselleştirme</small></h1>
+    <span class="durum" id="durum">Bağlanıyor…</span>
+  </header>
+  <nav role="tablist">
+    <button role="tab" id="t-simdi" data-s="simdi" aria-selected="true">Şu an<span class="say" id="say-aksiyon" hidden></span></button>
+    <button role="tab" id="t-isler" data-s="isler" aria-selected="false">İşler</button>
+    <button role="tab" id="t-demolar" data-s="demolar" aria-selected="false">Demolar</button>
+  </nav>
+
+  <section class="sekme" id="simdi" role="tabpanel"><div class="bos">Güncel adım yükleniyor…</div></section>
+  <section class="sekme" id="isler" role="tabpanel" hidden><div class="bos">İşler yükleniyor…</div></section>
+  <section class="sekme" id="demolar" role="tabpanel" hidden><div class="bos">Demolar yükleniyor…</div></section>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const esc = v => String(v ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+// `metin` alanlarında `kod` yazımı kod olarak gösterilir
+const md = v => esc(v).replace(/`([^`]+)`/g, "<code>$1</code>");
+const DURUM = { yapilacak: "Yapılacak", yapiliyor: "Yapılıyor", bekliyor: "Dışarıda bekliyor", bitti: "Bitti" };
+const kodSira = (a, b) => a.sira - b.sira || String(a.kod).localeCompare(String(b.kod), "tr", { numeric: true });
+const S = { isler: [], demolar: [], adim: null };
+let db = null, onizlenen = null;
+
+/* ---- sekmeler ---- */
+function sekme(ad) {
+  if (!$(ad)) ad = "simdi";
+  document.querySelectorAll("nav button").forEach(b => b.setAttribute("aria-selected", b.dataset.s === ad));
+  document.querySelectorAll("section.sekme").forEach(s => s.hidden = s.id !== ad);
+  try { localStorage.setItem("sekme", ad); } catch {}
+}
+document.querySelector("nav").onclick = e => { const b = e.target.closest("button"); if (b) { sekme(b.dataset.s); history.replaceState(null, "", "#" + b.dataset.s); } };
+let ilk = location.hash.slice(1); try { ilk ||= localStorage.getItem("sekme"); } catch {}
+sekme(ilk || "simdi");
+
+/* ---- Şu an ---- */
+function cizSimdi() {
+  const a = S.adim, el = $("simdi");
+  if (!a) { el.innerHTML = `<div class="bos">Güncel adım henüz yazılmadı. Claude bir sonraki oturumda buraya yazacak.</div>`; return; }
+  const yaprak = S.isler, biten = yaprak.filter(i => i.durum === "bitti").length;
+  const aks = a.aksiyonlar || [], acik = aks.filter(x => !x.cevap).length;
+  $("say-aksiyon").hidden = !acik; $("say-aksiyon").textContent = acik;
+  const ilgili = (a.isler || []).map(k => yaprak.find(i => i.kod === k)).filter(Boolean);
+  el.innerHTML = `
+    <div class="kart adim">
+      <div class="ust"><h3>Bulunduğumuz adım</h3>
+        <span class="ilerleme"><span class="cubuk"><i style="width:${yaprak.length ? biten / yaprak.length * 100 : 0}%"></i></span>${biten} / ${yaprak.length} iş bitti</span></div>
+      <h2>${esc(a.baslik)}</h2>
+      <p>${md(a.aciklama)}</p>
+      ${ilgili.length ? `<p class="kod">İlgili işler: ${ilgili.map(i => esc(i.kod + " " + i.ad)).join(" · ")}</p>` : ""}
+      ${a.claude ? `<p class="soluk"><b>Claude'da:</b> ${md(a.claude)}</p>` : ""}
+    </div>
+    <div style="display:grid;gap:12px">
+      <h3>${acik ? `Senden beklenen (${acik})` : "Senden beklenen"}</h3>
+      ${aks.length ? aks.map((x, i) => aksiyonHtml(x, i)).join("") : `<div class="bos">Bu adımda senden bir şey beklenmiyor.</div>`}
+    </div>
+    ${(a.sonra || []).length ? `<div style="display:grid;gap:10px"><h3>Bu adımdan sonra</h3><ol class="sonra">${a.sonra.map(s => `<li>${md(s)}</li>`).join("")}</ol></div>` : ""}`;
+}
+function aksiyonHtml(x, i) {
+  const sec = x.secenekler || [];
+  return `<div class="kart aksiyon ${x.cevap ? "cevapli" : ""}" data-i="${i}">
+    <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap"><h2>${esc(x.soru)}</h2>
+      <span class="etiket ${x.cevap ? "e-bitti" : "e-karar"}">${x.cevap ? "Cevaplandı" : x.tur === "is" ? "Senin işin" : "Kararın bekleniyor"}</span></div>
+    ${x.neden ? `<p class="soluk">${md(x.neden)}</p>` : ""}
+    ${(x.adimlar || []).length ? `<ol class="sonra">${x.adimlar.map(s => `<li>${md(s)}</li>`).join("")}</ol>` : ""}
+    ${sec.length ? `<div class="secenekler">${sec.map(s => `
+      <button class="secenek" data-sec="${esc(s.ad)}" aria-pressed="${x.cevap === s.ad}">
+        ${s.oneri ? `<span class="oneri">Claude'un önerisi</span>` : ""}
+        <b>${esc(s.ad)}</b>${s.aciklama ? `<span class="soluk">${md(s.aciklama)}</span>` : ""}
+        ${s.demo ? `<a href="${esc(s.demo)}" target="_blank" rel="noopener" data-demo>Demoyu aç ↗</a>` : ""}
+      </button>`).join("")}</div>` : ""}
+    <div class="not-satir"><input id="not-${i}" placeholder="${sec.length ? "Not ekle (isteğe bağlı)" : "Yaptığında buraya kısaca yaz"}" value="${esc(x.not)}">
+      ${sec.length ? "" : `<button class="secenek" data-sec="Yapıldı" aria-pressed="${x.cevap === "Yapıldı"}" style="padding:6px 12px">Yaptım</button>`}</div>
+    <span class="kayit" id="kayit-${i}">${x.cevap ? `Cevabın: ${esc(x.cevap)}. Claude bir sonraki oturumda işleyecek.` : ""}</span>
+  </div>`;
+}
+async function aksiyonYaz(i, alan, deger) {
+  if (!db) return;
+  const aks = structuredClone(S.adim.aksiyonlar);
+  aks[i][alan] = deger;
+  if (alan === "cevap") aks[i].cevapTarihi = new Date().toISOString();
+  try { await db.doc("adim/simdi").update({ aksiyonlar: aks }); }
+  catch (e) { $("kayit-" + i).textContent = "Kaydedilemedi (" + (e.code || "hata") + "). Bu paneli düzenleme yetkisiyle aç."; $("kayit-" + i).style.color = "var(--karar)"; }
+}
+$("simdi").addEventListener("click", e => {
+  if (e.target.closest("[data-demo]")) { e.stopPropagation(); return; }
+  const b = e.target.closest("[data-sec]"); if (!b) return;
+  const i = +b.closest("[data-i]").dataset.i, x = S.adim.aksiyonlar[i];
+  aksiyonYaz(i, "cevap", x.cevap === b.dataset.sec ? "" : b.dataset.sec);
+});
+$("simdi").addEventListener("change", e => {
+  if (e.target.id?.startsWith("not-")) aksiyonYaz(+e.target.id.slice(4), "not", e.target.value.trim());
+});
+
+/* ---- İşler ---- */
+function cizIsler() {
+  const t = S.isler.slice().sort(kodSira), yap = t.filter(i => i.durum !== "bitti"), bit = t.filter(i => i.durum === "bitti");
+  const satir = (ad, v, cls = "") => v ? `<div class="satir ${cls}"><span>${ad}</span><span>${md(v)}</span></div>` : "";
+  $("isler").innerHTML = `
+    <div style="display:grid;gap:12px"><h3>Yapılacaklar (${yap.length})</h3>
+      <div class="liste">${yap.map(i => `<div class="kart is">
+        <span class="kod">${esc(i.kod)}</span>
+        <div class="bas"><b>${esc(i.ad)}</b>
+          <span class="etiket e-${esc(i.durum)}">${esc(DURUM[i.durum] || i.durum)}</span>
+          ${i.karar ? `<span class="etiket e-karar">Karar bekliyor</span>` : ""}
+          ${i.kimde ? `<span class="kod">sırada: ${esc(i.kimde)}</span>` : ""}</div>
+        <div class="detay">
+          ${satir("Karar", i.karar, "karar")}
+          ${satir("Neden yapılmadı", i.neden)}
+          ${satir("Çıktı", i.teslim)}
+        </div></div>`).join("") || `<div class="bos">Yapılacak iş kalmadı.</div>`}</div></div>
+    <div style="display:grid;gap:12px"><h3>Yapılanlar (${bit.length})</h3>
+      <div class="liste">${bit.map(i => `<div class="kart is yapildi">
+        <span class="kod">${esc(i.kod)}</span>
+        <div class="bas"><b>${esc(i.ad)}</b><span class="etiket e-bitti">Bitti</span></div>
+        ${i.sonuc ? `<div class="detay">${md(i.sonuc)}</div>` : ""}</div>`).join("") || `<div class="bos">Henüz biten iş yok.</div>`}</div></div>`;
+}
+
+/* ---- Demolar ---- */
+function cizDemolar() {
+  const d = S.demolar.slice().sort(kodSira);
+  $("demolar").innerHTML = `
+    <p class="bilgi">„Panelde” işaretli demolar bu sayfanın içinde çalışır. „Yerelde” olanlar VM'deki canlı sunucuya bağlı: komutu VM'de çalıştır, ana makinede <code>ssh -N -L 4400:127.0.0.1:4400 -L 4500:127.0.0.1:4500 -L 4600:127.0.0.1:4600 -L 4601:127.0.0.1:4601 vm</code> tüneli açıkken adresi aç.</p>
+    <div id="onizleme-yer"></div>
+    <div class="demolar">${d.map((x, n) => `<div class="kart demo">
+      ${x.gorsel ? `<img src="${esc(x.gorsel)}" alt="${esc(x.ad)} ekran görüntüsü" loading="lazy">` : ""}
+      <div class="ic">
+        <div class="bas"><span class="kod">${esc(x.cikti)}</span><span class="etiket ${x.yer === "panel" ? "e-bitti" : "e-yapiliyor"}">${x.yer === "panel" ? "Panelde" : "Yerelde"}</span></div>
+        <h2>${esc(x.ad)}</h2>
+        <p class="soluk" style="font-size:14px">${md(x.ozet)}</p>
+        ${x.karar ? `<p style="font-size:13.5px;color:var(--karar)">Karar: ${md(x.karar)}</p>` : ""}
+        ${(x.sayfalar || []).length ? `<div class="baglar">${x.sayfalar.map(s => `<button data-onizle="${esc(s.yol)}" data-ad="${esc(x.ad + " · " + s.ad)}">${esc(s.ad)}</button>`).join("")}</div>` : ""}
+        ${x.komut ? `<div class="komut"><code>${esc(x.komut)}</code><button data-kopya="${esc(x.komut)}">Kopyala</button></div>` : ""}
+        ${x.adres ? `<p class="kod">${esc(x.adres)}</p>` : ""}
+      </div></div>`).join("") || `<div class="bos">Henüz demo eklenmedi.</div>`}</div>`;
+  if (onizlenen) onizle(onizlenen.yol, onizlenen.ad);
+}
+function onizle(yol, ad) {
+  onizlenen = yol ? { yol, ad } : null;
+  $("onizleme-yer").innerHTML = yol ? `<div class="onizleme"><div class="ust"><b>${esc(ad)}</b>
+    <span class="baglar"><a href="${esc(yol)}" target="_blank" rel="noopener">Yeni sekmede ↗</a><button data-kapat>Kapat</button></span></div>
+    <iframe src="${esc(yol)}" title="${esc(ad)}"></iframe></div>` : "";
+  if (yol) $("onizleme-yer").scrollIntoView({ block: "start" });
+}
+$("demolar").addEventListener("click", e => {
+  const o = e.target.closest("[data-onizle]"); if (o) return onizle(o.dataset.onizle, o.dataset.ad);
+  if (e.target.closest("[data-kapat]")) return onizle(null);
+  const k = e.target.closest("[data-kopya]");
+  if (k) navigator.clipboard.writeText(k.dataset.kopya).then(() => { k.textContent = "Kopyalandı"; },
+    () => { getSelection().selectAllChildren(k.previousElementSibling); k.textContent = "Seçildi"; });
+});
+
+/* ---- veri ---- */
+function ciz() { cizSimdi(); cizIsler(); cizDemolar(); }
+(async () => {
+  db = window.claude?.use ? await claude.use("db") : null;
+  if (!db) { $("durum").textContent = "Veritabanı açılamadı: paneli claude.ai'de oturum açıkken görüntüle."; $("durum").className = "durum err"; return; }
+  const saat = () => $("durum").textContent = "Canlı · " + new Date().toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  const hata = () => { $("durum").textContent = "Bağlantı koptu; sayfayı yenile."; $("durum").className = "durum err"; };
+  db.collection("isler").onSnapshot(s => { S.isler = s.docs.map(d => ({ kod: d.id, ...d.data() })); saat(); cizSimdi(); cizIsler(); }, hata);
+  db.collection("demolar").onSnapshot(s => { S.demolar = s.docs.map(d => ({ kod: d.id, ...d.data() })); saat(); cizDemolar(); }, hata);
+  db.doc("adim/simdi").onSnapshot(d => { S.adim = d.exists ? d.data() : null; saat(); cizSimdi(); }, hata);
+})();
+</script>

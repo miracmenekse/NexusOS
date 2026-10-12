@@ -1,0 +1,279 @@
+{
+  "apps": [
+    {
+      "id": "immersed",
+      "name": "Immersed",
+      "tagline": "VR ile İş Akışınızı Optimize Edin",
+      "description": "Immersed, VR ortamında birden fazla sanal monitör ile çalışmanıza olanak tanıyan bir VR çalışma alanı platformudur. Üretkenliğini maksimize etmek isteyen uzaktan çalışanlar ve geliştiriciler için mükemmeldir.",
+      "founded": 2016,
+      "marketSize": "$500M+",
+      "funding": "$50M+",
+      "status": "Aktif",
+      "website": "https://immersed.com",
+      "demoVideo": "https://www.youtube.com/embed/nTkl_5ewAUg",
+      "targetAudience": "Uzaktan Çalışanlar, Yazılım Geliştirici, Tasarımcılar",
+      "solution": "VR ortamında sınırsız sanal monitör, yüksek üretkenlik, odak artırma",
+      "customers": ["Fortune 500 Şirketleri", "Yazılım Şirketleri", "Tasarım Stüdyoları"],
+      "screenshots": [
+        "/images/immersed/screen1.jpg",
+        "/images/immersed/screen3.png",
+        "/images/immersed/screen4.png",
+        "/images/immersed/screen5.jpg"
+      ],
+      "news": [
+        {
+          "title": "Immersed 20 Milyon Dolar Seri A Finansmanı Aldı",
+          "excerpt": "VR çalışma alanı platformu, ekibini genişletmek ve ürün geliştirmeyi hızlandırmak için finansman sağladı.",
+          "date": "2023",
+          "source": "TechCrunch"
+        },
+        {
+          "title": "Kurumsal Benimseme Artıyor",
+          "excerpt": "Fortune 500 şirketleri, uzak takım işbirliği için Immersed'i benimsemeye başladı.",
+          "date": "2024",
+          "source": "VentureBeat"
+        },
+        {
+          "title": "Yeni Yapay Zeka Özellikleri Duyuruldu",
+          "excerpt": "Immersed, yapay zeka destekli pencere yönetimi ve üretkenlik araçlarını entegre ediyor.",
+          "date": "2025",
+          "source": "ProductHunt"
+        }
+      ],
+      "blueOcean": {
+        "creativity": "Düşük",
+        "execution": "Yüksek",
+        "position": "Yürütme odaklı VR çalışma alanı"
+      }
+    },
+    {
+      "id": "workrooms",
+      "name": "Meta Horizon Workrooms",
+      "tagline": "VR İş Toplantı Alanı",
+      "description": "Meta Horizon Workrooms, Meta'nın uzak takımlar için tasarladığı VR işbirliği platformuydu. Avatarlar, sanal beyaz tahtalar ve ekran paylaşımı yeteneklerini içeriyordu.",
+      "founded": 2021,
+      "marketSize": "$1B+ (Meta)",
+      "funding": "İç Finansman (Meta)",
+      "status": "Kapatıldı (16 Şubat 2026)",
+      "website": "https://www.meta.com/help/quest/",
+      "demoVideo": "https://www.youtube.com/embed/QGgUPMsQ1e4",
+      "targetAudience": "Kurumsal Takımlar, Uzak Çalışanlar, İşbirliği Platformları",
+      "solution": "Avatar tabanlı VR toplantıları, sanal beyaz tahta, ekran paylaşımı, sosyal işbirliği",
+      "customers": ["Meta Çalışanları", "Pilot Kurumlar", "VR Meraklıları"],
+      "screenshots": [
+        "/images/workrooms/screen1.jpg",
+        "/images/workrooms/screen3.jpg",
+        "/images/workrooms/screen4.jpg",
+        "/images/workrooms/screen5.png"
+      ],
+      "news": [
+        {
+          "title": "Meta Horizon Workrooms'u Kapatıyor",
+          "excerpt": "Meta, VR işbirliği platformunu sonlandırıyor ve diğer metaverse girişimlerine odaklanıyor.",
+          "date": "Şub 2026",
+          "source": "The Verge"
+        },
+        {
+          "title": "Horizon Workrooms Başlatıldı",
+          "excerpt": "Meta, avatarlar ve işbirliği araçlarıyla VR toplantı alanını tanıttı.",
+          "date": "2021",
+          "source": "Meta Blog"
+        },
+        {
+          "title": "Kurumsal Özellikler Eklendi",
+          "excerpt": "Workrooms, kurumsal kullanıcılar için SSO ve gelişmiş güvenlik özellikleri kazandı.",
+          "date": "2023",
+          "source": "Meta"
+        }
+      ],
+      "blueOcean": {
+        "creativity": "Yüksek",
+        "execution": "Düşük",
+        "position": "Yaratıcı ama yürütme zorlukları"
+      }
+    },
+    {
+      "id": "vspatial",
+      "name": "vSpatial",
+      "tagline": "VR'da Cihazlarınıza Güvenli Erişim",
+      "description": "vSpatial, birden fazla monitör desteğiyle güvenli VR uzak masaüstü erişimi sağlar. Gizliliğe önem veren profesyoneller ve kuruluşlar için tasarlanmıştır.",
+      "founded": 2018,
+      "marketSize": "$100M+",
+      "funding": "$10M+",
+      "status": "Aktif (Potansiyel Terk)",
+      "website": "https://www.vspatial.com",
+      "demoVideo": "https://www.youtube.com/embed/zK3m6jUKrXA",
+      "targetAudience": "Güvenlik Odaklı Profesyoneller, Kurumsal IT, Gizlilik Savunucuları",
+      "solution": "Şifreli VR uzak masaüstü, çok monitör desteği, lokal veri işleme, SOC 2 uyumluluğu",
+      "customers": ["Finans Şirketleri", "Hukuk Firmaları", "Savunma Sektörü"],
+      "screenshots": [
+        "/images/vspatial/screen1.jpg",
+        "/images/vspatial/screen3.jpg",
+        "/images/vspatial/screen4.jpg",
+        "/images/vspatial/screen5.png"
+      ],
+      "news": [
+        {
+          "title": "vSpatial Remote Pro Başlatıldı",
+          "excerpt": "Yeni abonelik seviyesi, sınırsız uzak erişim için yıllık 20 dolar sunuyor.",
+          "date": "2024",
+          "source": "ProductHunt"
+        },
+        {
+          "title": "Kurumsal Güvenlik Özellikleri",
+          "excerpt": "vSpatial, kurumsal müşteriler için SSO ve SOC 2 uyumluluğu ekliyor.",
+          "date": "2023",
+          "source": "vSpatial Blog"
+        },
+        {
+          "title": "Çok Platformlu Destek",
+          "excerpt": "vSpatial artık Windows, macOS ve Linux cihazlarını destekliyor.",
+          "date": "2022",
+          "source": "GitHub"
+        }
+      ],
+      "blueOcean": {
+        "creativity": "Düşük",
+        "execution": "Yüksek",
+        "position": "Güvenlik odaklı yürütme"
+      }
+    },
+    {
+      "id": "replit",
+      "name": "Replit",
+      "tagline": "Yapay Zeka ile Uygulama Oluşturun - Kodlama Gerekli Değil",
+      "description": "Replit, herkesin doğal dil kullanarak uygulama oluşturmasını sağlayan yapay zeka destekli bir bulut geliştirme platformudur. Gerçek zamanlı işbirliği ve anında dağıtım özellikleri vardır.",
+      "founded": 2016,
+      "marketSize": "$1B+",
+      "funding": "$200M+",
+      "status": "Aktif",
+      "website": "https://replit.com",
+      "demoVideo": "https://www.youtube.com/embed/1JPvi48oVY8",
+      "targetAudience": "Yazılım Geliştirici, Öğrenciler, Startup Kurucuları, Yapay Zeka Meraklıları",
+      "solution": "Yapay zeka destekli kod üretimi, gerçek zamanlı işbirliği, anında dağıtım, AI Agent",
+      "customers": ["Microsoft", "Y Combinator Startupları", "Eğitim Kurumları", "Fortune 500"],
+      "screenshots": [
+        "/images/replit/screen1.jpg",
+        "/images/replit/screen2.png",
+        "/images/replit/screen3.jpg",
+        "/images/replit/screen4.png"
+      ],
+      "news": [
+        {
+          "title": "Replit Together AI'ye Katıldı",
+          "excerpt": "Replit, üretken yapay zekaya kod yorumlaması getirmek için Together AI ile ortaklık yapıyor.",
+          "date": "2025",
+          "source": "Replit Blog"
+        },
+        {
+          "title": "Agent 4 Yayınlandı",
+          "excerpt": "Replit, vibe kodlaması ve üretime hazır uygulamalar için en hızlı yapay zeka aracısını başlatıyor.",
+          "date": "2025",
+          "source": "ProductHunt"
+        },
+        {
+          "title": "Microsoft Ortaklığı",
+          "excerpt": "Replit ve Microsoft, vibe kodlamasını kurumsal ortama getirmek için ortaklığı genişletiyor.",
+          "date": "2025",
+          "source": "Microsoft"
+        }
+      ],
+      "blueOcean": {
+        "creativity": "Yüksek",
+        "execution": "Yüksek",
+        "position": "Yapay zeka destekli yaratıcı yürütme"
+      }
+    },
+    {
+      "id": "spatial",
+      "name": "Spatial.io",
+      "tagline": "Sürükleyici 3B Sanal Dünyalar Oluşturun",
+      "description": "Spatial.io, etkileşimli 3B sanal alanlar oluşturmak için kod yazılmayan bir platformdur. Markalar, eğitimciler ve yaratıcılar tarafından sürükleyici deneyimler için kullanılır.",
+      "founded": 2019,
+      "marketSize": "$500M+",
+      "funding": "$50M+",
+      "status": "Aktif",
+      "website": "https://www.spatial.io",
+      "demoVideo": "https://www.youtube.com/embed/FPCh4ZB4QGw",
+      "targetAudience": "Markalar, Eğitimciler, Yaratıcılar, Oyun Geliştiricileri",
+      "solution": "No-code 3B sanal alanlar, etkileşimli deneyimler, sosyal oyunlar, eğitim platformları",
+      "customers": ["Vogue", "BMW", "McDonald's", "Üniversiteler", "Sanat Müzeleri"],
+      "screenshots": [
+        "/images/spatial/screen1.jpg",
+        "/images/spatial/screen2.jpg",
+        "/images/spatial/screen3.webp"
+      ],
+      "news": [
+        {
+          "title": "Spatial.io 30 Milyon Dolar Seri B Finansmanı Aldı",
+          "excerpt": "3B platformu, kurumsal pazara genişlemek için finansman sağladı.",
+          "date": "2024",
+          "source": "Crunchbase"
+        },
+        {
+          "title": "Marka Ortaklıkları Genişliyor",
+          "excerpt": "Spatial.io, Vogue, BMW ve McDonald's ile sürükleyici deneyimler için ortaklık yapıyor.",
+          "date": "2024",
+          "source": "Spatial Blog"
+        },
+        {
+          "title": "Eğitim Özellikleri Başlatıldı",
+          "excerpt": "Spatial.io, sanal sınıflar ve eğitim oyunlaştırması için araçlar tanıtıyor.",
+          "date": "2023",
+          "source": "EdTech Magazine"
+        }
+      ],
+      "blueOcean": {
+        "creativity": "Yüksek",
+        "execution": "Yüksek",
+        "position": "Yaratıcı 3B yürütme"
+      }
+    },
+    {
+      "id": "codesandbox",
+      "name": "CodeSandbox",
+      "tagline": "Herkes İçin Bulut Geliştirme Ortamı",
+      "description": "CodeSandbox, anında işbirliği ve dağıtım özelliklerine sahip web geliştirme için bulut tabanlı bir IDE'dir. Şu anda yapay zeka destekli kod yürütme için Together AI'nin bir parçasıdır.",
+      "founded": 2017,
+      "marketSize": "$500M+",
+      "funding": "$100M+",
+      "status": "Aktif",
+      "website": "https://codesandbox.io",
+      "demoVideo": "https://www.youtube.com/embed/lfYo4mfOyM8",
+      "targetAudience": "Web Geliştirici, Öğrenciler, Tasarımcılar, Yapay Zeka Geliştirici",
+      "solution": "Bulut tabanlı IDE, gerçek zamanlı işbirliği, anında dağıtım, yapay zeka kod yürütme",
+      "customers": ["Binlerce Geliştirici", "Eğitim Platformları", "Startup Hızlandırıcıları", "Tech Şirketleri"],
+      "screenshots": [
+        "/images/codesandbox/screen1.jpg",
+        "/images/codesandbox/screen3.jpg",
+        "/images/codesandbox/screen4.jpg",
+        "/images/codesandbox/screen5.png"
+      ],
+      "news": [
+        {
+          "title": "CodeSandbox Together AI'ye Katıldı",
+          "excerpt": "CodeSandbox, yapay zeka kod üretimini güçlendirmek için Together AI'nin bir parçası oluyor.",
+          "date": "2025",
+          "source": "Together AI"
+        },
+        {
+          "title": "SDK Başlatıldı",
+          "excerpt": "CodeSandbox, yapay zeka aracıları ve güvenli kod yürütme için SDK başlatıyor.",
+          "date": "2025",
+          "source": "CodeSandbox Blog"
+        },
+        {
+          "title": "Dev Container Desteği",
+          "excerpt": "CodeSandbox, özel geliştirme konteynerleri için destek ekliyor.",
+          "date": "2024",
+          "source": "CodeSandbox"
+        }
+      ],
+      "blueOcean": {
+        "creativity": "Orta",
+        "execution": "Yüksek",
+        "position": "Geliştirici odaklı yürütme"
+      }
+    }
+  ]
+}

@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusOS · Kristal çekirdek</title>
+<style>
+  :root { --bg:#04060d; --fg:#cfe3ff; --dim:#6b7fa3; --card:#0b1324; --line:#1d2f55; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:14px 20px 6px; }
+  h1 { margin:0; font-size:17px; letter-spacing:.07em; } header p { margin:0; color:var(--dim); flex:1 1 280px; } header a { color:var(--dim); }
+  button, select { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:5px 12px; font:inherit; cursor:pointer; }
+  .wrap { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:14px; padding:8px 20px 24px; }
+  @media (max-width:900px) { .wrap { grid-template-columns:1fr; } }
+  #st { position:relative; aspect-ratio:1100/640; border:1px solid var(--line); border-radius:16px; overflow:hidden; background:radial-gradient(ellipse at 50% 40%,#0c1a33,#03050a 75%); }
+  canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .bub { position:absolute; transform:translate(-50%,-100%); max-width:210px; background:#0b1324ee; border:1px solid var(--c); border-radius:10px; padding:4px 9px; font-size:12px; z-index:5; pointer-events:none; box-shadow:0 0 14px color-mix(in srgb,var(--c) 45%,transparent); }
+  .bub.tl { color:var(--dim); border-style:dashed; }
+  aside { display:flex; flex-direction:column; gap:12px; }
+  .box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 12px; }
+  .box h3 { margin:0 0 6px; font-size:12px; letter-spacing:.08em; color:var(--dim); font-weight:600; }
+  .row { display:flex; align-items:center; gap:8px; padding:2px 0; } .row i { width:9px; height:9px; border-radius:50%; background:var(--c); opacity:.25; } .row.w i { opacity:1; animation:blink 1s infinite; } .row.d i { opacity:1; } .row span:last-child { margin-left:auto; color:var(--dim); font-size:12px; }
+  @keyframes blink { 50% { opacity:.3; } }
+  #log { max-height:210px; overflow:auto; font-size:12px; } #log div { padding:2px 0 2px 8px; border-left:3px solid var(--c); margin:3px 0; }
+  #sonuc { font-size:18px; font-weight:700; } .ok { color:#6ee7a0; } .no { color:#ff7a7a; }
+</style>
+</head>
+<body>
+<header>
+  <h1>NEXUSOS · KRİSTAL ÇEKİRDEK</h1>
+  <p id="baslik">…</p>
+  <a href="town.html#izo">izometrik ofis</a><a href="town.html#neon">neon kasaba</a>
+  <button id="pl">⏸</button><button id="rs">⏮ baştan</button>
+  <select id="sp"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select>
+</header>
+<div class="wrap">
+  <div id="st"><canvas id="cv" width="1100" height="640"></canvas></div>
+  <aside>
+    <div class="box"><h3>AGENT'LAR <span style="font-weight:400">· her biri bir küp</span></h3><div id="ags"></div></div>
+    <div class="box"><h3>SONUÇ</h3><div id="sonuc">…</div></div>
+    <div class="box"><h3>KONUŞMA</h3><div id="log"></div></div>
+  </aside>
+</div>
+<script src="ortak.js"></script>
+<script>
+// A glass floor, an orchestrator crystal in the middle, one cube per agent, glass cards for the tools. Requests are braided light beams.
+const c = $("cv").getContext("2d"), st = $("st"), W = 1100, H = 640;
+const POS = { "orkestratör":[0, 0], analiz:[4.5, 6.5], teklif:[9.5, 1.5], kampanya:[8, -4.5], risk:[1.5, -7], "sözleşme":[-5.5, -5.5] };
+const CARD = { musteri:[-11, 1], crm:[5.5, 10], katalog:[13.5, 2.5], kampanya:[12, -7], risk:[1.8, -11.2], sozlesme:[-8.2, -9] };   // card centers; cards float at z=3.2
+const LABEL = { musteri:"müşteri hattı", crm:"CRM", katalog:"tarife kataloğu", kampanya:"kampanya motoru", risk:"kredi / risk", sozlesme:"sözleşme" };
+const CARDICON = { ...ICON, musteri:"📱" }, CARDCOL = { musteri:"müşteri", ...TCOL };
+let cam = { yaw:0, pitch:.95, dist:27, f:930 }, t0 = performance.now() / 1000, time = 0;
+let beams, cube, cardHit, bub, flash, S;
+
+function proj([x, y, z]) {   // world: x right, y away, z up
+  const cy = Math.cos(cam.yaw), sy = Math.sin(cam.yaw), X = x * cy - y * sy, Y = x * sy + y * cy, cp = Math.cos(cam.pitch), sp = Math.sin(cam.pitch);
+  const depth = Y * cp - z * sp + cam.dist, s = cam.f / depth;
+  return [W / 2 + X * s, H * .56 - (z * cp + Y * sp) * s, depth, s];
+}
+const rgba = (hex, a) => { const n = parseInt(hex.slice(1), 16); return `rgba(${n >> 16},${n >> 8 & 255},${n & 255},${a})`; };
+const cubePt = a => { const [x, y] = POS[a]; return [x, y, 1.6 + Math.sin(time * 1.6 + x) * .15]; };
+const anchor = a => a === "müşteri" ? [...CARD.musteri, 3.2] : cubePt(a);
+const stationPt = s => [...CARD[s], 3.2];
+
+function reset() { beams = []; cube = {}; cardHit = {}; flash = 0; for (const a in POS) cube[a] = { state:"idle", pulse:0 };
+  st.querySelectorAll(".bub").forEach(e => e.remove()); bub = {}; }
+reset();
+function say(a, text, cls) {
+  bub[a]?.el.remove(); const el = document.createElement("div"); el.className = "bub " + (cls || ""); el.style.setProperty("--c", COL[a]); el.textContent = text; st.append(el);
+  bub[a] = { el, until: time + 4.2 / +$("sp").value }; if (cube[a]) cube[a].pulse = 1; if (a === "orkestratör") flash = 1;
+}
+function beam(from, to, col) { beams.push({ from, to, col, t: time, dur: 1.3 }); }
+const H1 = {
+  msg(f, t, e) { beam(anchor(f), anchor(t), COL[f]); say(f, e.text, e.reply ? "" : ""); if (t === "orkestratör") flash = 1; },
+  tool(a, s, e) { beam(anchor(a), stationPt(s), COL[a]); cardHit[s] = time; say(a, "🔧 " + e.text, "tl"); },
+  say(a, e) { say(a, e.text); },
+  row(a, cls, txt) { if (!cube[a]) return; cube[a].state = cls === "d" ? "done" : cls === "w" && /yanıt/.test(txt) ? "wait" : cls === "w" ? "work" : "idle"; },
+  reset,
+};
+
+// --- drawing helpers
+function quad(pts, fill, stroke, lw) { c.beginPath(); pts.forEach(([a, b], i) => i ? c.lineTo(a, b) : c.moveTo(a, b)); c.closePath(); if (fill) { c.fillStyle = fill; c.fill(); } if (stroke) { c.strokeStyle = stroke; c.lineWidth = lw; c.stroke(); } }
+function floor() {
+  const R = [[-14, -12], [14, -12], [14, 11], [-14, 11]].map(([x, y]) => proj([x, y, 0]));
+  quad(R, "rgba(120,180,255,.05)", "rgba(150,220,255,.35)", 1.5);
+  c.strokeStyle = "rgba(120,190,255,.07)"; c.lineWidth = 1; c.beginPath();   // faint circuit grid
+  for (let i = -14; i <= 14; i += 2) { c.moveTo(...proj([i, -12, 0]).slice(0, 2)); c.lineTo(...proj([i, 11, 0]).slice(0, 2)); }
+  for (let j = -12; j <= 11; j += 2) { c.moveTo(...proj([-14, j, 0]).slice(0, 2)); c.lineTo(...proj([14, j, 0]).slice(0, 2)); } c.stroke();
+  for (const a in POS) if (a !== "orkestratör") {   // pedestal traces core -> cube, like the cables in the reference
+    const [x, y] = POS[a], p = [proj([0, 0, 0]), proj([x * .5, y * .25, 0]), proj([x, y, 0])];
+    c.strokeStyle = rgba(COL[a], .28); c.lineWidth = 2; c.beginPath(); c.moveTo(p[0][0], p[0][1]); c.quadraticCurveTo(p[1][0], p[1][1], p[2][0], p[2][1]); c.stroke(); }
+  for (const r of [3.2, 4.4]) { c.strokeStyle = "rgba(120,200,255,.18)"; c.beginPath(); for (let i = 0; i <= 48; i++) { const q = proj([Math.cos(i / 48 * 6.283) * r, Math.sin(i / 48 * 6.283) * r, 0]); i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1]); } c.stroke(); }
+}
+const ICO = (() => { const p = (1 + Math.sqrt(5)) / 2, v = [[-1,p,0],[1,p,0],[-1,-p,0],[1,-p,0],[0,-1,p],[0,1,p],[0,-1,-p],[0,1,-p],[p,0,-1],[p,0,1],[-p,0,-1],[-p,0,1]].map(a => { const l = Math.hypot(...a); return a.map(x => x / l); });
+  return { v, f: [[0,11,5],[0,5,1],[0,1,7],[0,7,10],[0,10,11],[1,5,9],[5,11,4],[11,10,2],[10,7,6],[7,1,8],[3,9,4],[3,4,2],[3,2,6],[3,6,8],[3,8,9],[4,9,5],[2,4,11],[6,2,10],[8,6,7],[9,8,1]] }; })();
+function rot(v, a, b) { const [x, y, z] = v, c1 = Math.cos(a), s1 = Math.sin(a), x1 = x * c1 - y * s1, y1 = x * s1 + y * c1, c2 = Math.cos(b), s2 = Math.sin(b); return [x1, y1 * c2 - z * s2, y1 * s2 + z * c2]; }
+function core() {
+  const ctr = [0, 0, 3.1 + Math.sin(time) * .12], [cx, cy, , s] = proj(ctr), g = c.createRadialGradient(cx, cy, 0, cx, cy, 3.6 * s), k = .3 + flash * .5;
+  g.addColorStop(0, `rgba(150,220,255,${k})`); g.addColorStop(1, "rgba(150,220,255,0)"); c.fillStyle = g; c.beginPath(); c.arc(cx, cy, 3.6 * s, 0, 7); c.fill();
+  const V = ICO.v.map(v => rot(v, time * .3, .5 + Math.sin(time * .2) * .1).map((q, i) => ctr[i] + q * 2.1)), P = V.map(proj);
+  const F = ICO.f.map(f => ({ f, d: (P[f[0]][2] + P[f[1]][2] + P[f[2]][2]) / 3 })).sort((a, b) => b.d - a.d);
+  c.shadowColor = "#7fd8ff"; c.shadowBlur = 14 + flash * 24;
+  for (const { f } of F) quad(f.map(i => P[i]), `rgba(190,235,255,${.07 + flash * .08})`, `rgba(210,245,255,${.55 + flash * .35})`, 1.3);
+  c.shadowBlur = 0; c.fillStyle = "#cfe9ff"; c.font = `600 ${.3 * s}px system-ui`; c.textAlign = "center"; c.fillText("ORKESTRATÖR", cx, proj([0, 0, 0.2])[1] + .6 * s);
+}
+function agentCube(a) {
+  const col = COL[a], [x, y, z] = cubePt(a), q = cube[a], h = .75, ang = time * .6 + x, V = [];
+  for (const dx of [-1, 1]) for (const dy of [-1, 1]) for (const dz of [-1, 1]) { const rx = dx * Math.cos(ang) - dy * Math.sin(ang), ry = dx * Math.sin(ang) + dy * Math.cos(ang); V.push(proj([x + rx * h, y + ry * h, z + dz * h])); }
+  const Fc = [[0,1,3,2],[4,5,7,6],[0,1,5,4],[2,3,7,6],[0,2,6,4],[1,3,7,5]].map(f => ({ f, d: f.reduce((s, i) => s + V[i][2], 0) })).sort((p, r) => r.d - p.d);
+  const [gx, gy, , s] = proj([x, y, 0]), act = q.state === "work" || q.pulse > .1;
+  c.strokeStyle = rgba(col, .55); c.fillStyle = rgba(col, .08); c.lineWidth = 2; c.beginPath(); c.ellipse(gx, gy, 1.5 * s, .75 * s, 0, 0, 7); c.fill(); c.stroke();   // pedestal disc
+  if (q.state !== "idle") {   // status ring: dashed spinning = working, slow dashes = waiting, solid green = done
+    c.strokeStyle = q.state === "done" ? "#6ee7a0" : q.state === "wait" ? "#9fb0cc" : col; c.lineWidth = 2.5;
+    c.setLineDash(q.state === "done" ? [] : q.state === "wait" ? [4, 8] : [10, 7]); c.lineDashOffset = -time * (q.state === "work" ? 40 : 6);
+    c.beginPath(); c.ellipse(gx, gy, 2.1 * s, 1.05 * s, 0, 0, 7); c.stroke(); c.setLineDash([]); }
+  c.shadowColor = col; c.shadowBlur = act ? 26 : 10;
+  for (const { f } of Fc) quad(f.map(i => V[i]), rgba(col, .14 + q.pulse * .2), rgba(col, .95), 1.6);
+  c.shadowBlur = 0; const [ex, ey, , es] = proj([x, y, z]); c.fillStyle = rgba(col, .6 + q.pulse * .4); c.beginPath(); c.arc(ex, ey, .22 * es, 0, 7); c.fill();
+  c.fillStyle = col; c.font = `600 ${.34 * s}px system-ui`; c.textAlign = "center"; c.fillText(a, gx, gy + 1.45 * s);
+}
+function card(k) {
+  const [x, y] = CARD[k], [px, py, , s] = proj([x, y, 3.2]), w = 3.1 * s, h = 2.3 * s, hit = Math.max(0, 1 - (time - (cardHit[k] ?? -9)) / 2.2), col = COL[({ musteri:"müşteri", ...TCOL })[k]];
+  c.shadowColor = col; c.shadowBlur = 6 + hit * 26;
+  c.beginPath(); c.roundRect(px - w / 2, py - h / 2, w, h, .25 * s); c.fillStyle = `rgba(190,225,255,${.05 + hit * .13})`; c.fill(); c.strokeStyle = rgba(col, .5 + hit * .5); c.lineWidth = 1.6; c.stroke(); c.shadowBlur = 0;
+  c.textAlign = "center"; c.font = `${.95 * s}px system-ui`; c.fillStyle = "#fff"; c.fillText(CARDICON[k], px, py + .1 * s);
+  c.font = `600 ${.3 * s}px system-ui`; c.fillStyle = rgba(col, 1); c.fillText(LABEL[k], px, py + h * .38);
+}
+function drawBeams() {
+  c.globalCompositeOperation = "lighter";
+  for (const b of beams) {
+    const age = time - b.t, travel = Math.min(1, age / b.dur), a = age < b.dur ? 1 : Math.max(0, 1 - (age - b.dur) / 2.4); if (a <= 0) continue;
+    const mid = b.from.map((v, i) => (v + b.to[i]) / 2); mid[2] += 2.4;
+    const pts = Array.from({ length: 41 }, (_, i) => { const u = i / 40, w = 1 - u; return proj(b.from.map((v, k) => w * w * v + 2 * w * u * mid[k] + u * u * b.to[k])); });
+    for (let k = 0; k < 3; k++) {   // three braided strands
+      c.strokeStyle = rgba(b.col, a * (.75 - k * .18)); c.lineWidth = 1.6; c.beginPath();
+      for (let i = 0; i <= 40 * travel; i++) { const u = i / 40, p = pts[i], n = pts[Math.min(40, i + 1)], dx = n[1] - p[1], dy = p[0] - n[0], l = Math.hypot(dx, dy) || 1, o = Math.sin(u * 31 + time * 6 + k * 2.1) * 9 * Math.sin(u * Math.PI);
+        const X = p[0] + dx / l * o, Y = p[1] + dy / l * o; i ? c.lineTo(X, Y) : c.moveTo(X, Y); } c.stroke(); }
+    if (travel < 1) { const p = pts[Math.round(40 * travel)]; c.fillStyle = rgba(b.col, 1); c.shadowColor = b.col; c.shadowBlur = 18; c.beginPath(); c.arc(p[0], p[1], 5, 0, 7); c.fill(); c.shadowBlur = 0; }
+  }
+  c.globalCompositeOperation = "source-over"; beams = beams.filter(b => time - b.t < b.dur + 2.4);
+}
+const rain = Array.from({ length: 60 }, () => ({ x: Math.random() * W, y: Math.random() * H, v: 40 + Math.random() * 90, l: 12 + Math.random() * 28 }));
+function frame(ts) {
+  const dt = Math.min(.1, ts / 1000 - t0 - time); time = ts / 1000 - t0; flash = Math.max(0, flash - dt * 1.2);
+  cam.yaw = Math.sin(time * .15) * .16;   // slow sway so the depth reads
+  for (const q of Object.values(cube)) q.pulse = Math.max(0, q.pulse - dt * 1.5);
+  c.clearRect(0, 0, W, H);
+  c.strokeStyle = "rgba(90,200,255,.14)"; c.lineWidth = 1.5; c.beginPath();
+  for (const r of rain) { r.y += r.v * dt; if (r.y > H) { r.y = -r.l; r.x = Math.random() * W; } c.moveTo(r.x, r.y); c.lineTo(r.x, r.y + r.l); } c.stroke();
+  floor(); drawBeams();
+  const items = [{ d: proj([0, 0, 3])[2], f: core }, ...Object.keys(POS).filter(a => a !== "orkestratör").map(a => ({ d: proj(cubePt(a))[2], f: () => agentCube(a) })), ...Object.keys(CARD).map(k => ({ d: proj([...CARD[k], 3.2])[2], f: () => card(k) }))];
+  items.sort((a, b) => b.d - a.d).forEach(i => i.f());
+  for (const [a, b] of Object.entries(bub)) { if (time > b.until) { b.el.remove(); delete bub[a]; continue; }
+    const [x, y] = proj(a === "müşteri" ? [...CARD.musteri, 4.8] : a === "orkestratör" ? [0, 0, 5.8] : [...POS[a], 3.1]); b.el.style.left = x / W * 100 + "%"; b.el.style.top = y / H * 100 + "%"; }
+  requestAnimationFrame(frame);
+}
+fetch(new URLSearchParams(location.search).get("data") || "telekom-ag.json").then(r => r.json()).then(d => { panelBuild(d); S = Sahne(d, H1); S.restart(); requestAnimationFrame(frame); });
+</script>
+</body>
+</html>

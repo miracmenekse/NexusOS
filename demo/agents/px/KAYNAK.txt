@@ -1,0 +1,3 @@
+Oda, mobilya ve karakter görselleri zkblk/pixel-agents (https://github.com/zkblk/pixel-agents, W17ANT/Claude-Office çatalı) deposundan alındı; depo MIT lisanslı (LICENSE-pixel-agents.txt).
+Köken notu: depo görsellerin 'özel piksel sanatı' olduğunu söylüyor, README yapay zekâ ile üretim yöntemini anlatıyor; görsellerin ayrı lisansı belirtilmemiş. Dizi karakterleri (The Office) alınmadı.
+Boyutları küçültüldü. Ticari ürüne girmeden önce köken netleştirilmeli.

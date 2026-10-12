@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusOS · Agent ofisi (sprite)</title>
+<style>
+  :root { --bg:#0a0d16; --fg:#dfe6f5; --dim:#7b86a0; --panel:#11151f; --line:#222a3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,sans-serif; padding:14px; }
+  .win { max-width:1280px; margin:auto; background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 10px 40px #0008; }
+  .bar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#171a24; border-bottom:1px solid var(--line); }
+  .bar i { width:11px; height:11px; border-radius:50%; } .bar .t { flex:1; text-align:center; font:11px/1 ui-monospace,monospace; letter-spacing:.25em; color:#6c7590; }
+  .bar button, .bar select { background:#1d2230; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:3px 9px; font:inherit; font-size:12px; cursor:pointer; }
+  .bar a { color:var(--dim); font-size:12px; text-decoration:none; }
+  .body { display:grid; grid-template-columns:minmax(0,1fr) 340px; }
+  @media (max-width:900px) { .body { grid-template-columns:1fr; } .chat { height:360px; } }
+  #st { position:relative; aspect-ratio:1600/1194; background:#0b0f19; }
+  canvas { position:absolute; inset:0; width:100%; height:100%;  }
+  .nt { position:absolute; transform:translate(-50%,-100%); font:600 10px system-ui; padding:0 6px; border-radius:6px; background:#0b0f19cc; color:var(--c); border:1px solid var(--c); white-space:nowrap; pointer-events:none; }
+  .lb { position:absolute; transform:translate(-50%,-100%); font:600 10px system-ui; color:#c7d3ea; background:#0b0f19aa; border-radius:5px; padding:0 6px; white-space:nowrap; pointer-events:none; }
+  .bub { position:absolute; transform:translate(-50%,-100%); max-width:200px; background:#fffffff2; color:#1d2433; border:2px solid var(--c); border-radius:10px; padding:3px 8px; font-size:12px; z-index:5; pointer-events:none; }
+  .bub.tl { color:#5b6578; border-style:dashed; }
+  .chat { position:relative; border-left:1px solid var(--line); background:#0e121b; }
+  .chat > div { position:absolute; inset:0; display:flex; flex-direction:column; }
+  .ch { padding:10px 12px; border-bottom:1px solid var(--line); font-weight:700; display:flex; gap:8px; align-items:center; } .ch small { color:var(--dim); font-weight:400; margin-left:auto; }
+  #log { flex:1; overflow:auto; padding:8px 10px; }
+  .m { display:flex; gap:9px; margin:9px 0; } .av { width:34px; height:34px; border-radius:8px; background:var(--c); display:grid; place-items:center; font-size:19px; flex:none; }
+  .m b { color:var(--c); } .m time { color:var(--dim); font-size:11px; margin-left:6px; } .m .x { color:#d5dcec; } .m.tool .x { color:var(--dim); font-style:italic; }
+  .pill { text-align:center; margin:12px 0; } .pill span { background:#171d2b; border:1px solid var(--line); color:var(--dim); border-radius:999px; padding:2px 12px; font-size:12px; }
+  .in { margin:8px 10px 10px; padding:9px 12px; border:1px solid var(--line); border-radius:8px; color:#566079; background:#0b0f18; }
+  #sonuc { font-weight:700; } .ok { color:#6ee7a0; } .no { color:#ff7a7a; }
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i>
+    <span class="t">NEXUSOS — AGENT OFİSİ</span><span id="baslik" style="color:var(--dim);font-size:12px"></span>
+    <a href="ag.html">ağ görünümü</a>
+    <button id="pl">⏸</button><button id="rs">⏮</button><select id="sp"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select></div>
+  <div class="body">
+    <div id="st"><canvas id="cv" width="1200" height="896"></canvas></div>
+    <div class="chat"><div><div class="ch"># satis-ofisi <small>sonuç: <span id="sonuc">…</span></small></div><div id="log"></div><div class="in">Mesaj #satis-ofisi</div></div></div>
+  </div>
+</div>
+<script>
+// Same walking choreography as the other pages, drawn with the sprite assets of zkblk/pixel-agents (MIT, see px/KAYNAK.txt):
+// an empty room image, furniture and characters as separate sprites, placed in percentages of the room. Agents walk the repo's waypoint graph.
+const $ = id => document.getElementById(id), st = $("st"), cv = $("cv").getContext("2d"), W = 1200, H = 896, SC = W / 800;
+const WP = {   // id: [x%, y%, neighbours] (aisle graph of the main office, symmetric)
+  door:[67.5,48.9,["door2","door3"]], door2:[64,46.6,["door","water1","n6"]], door3:[69.9,50.8,["door","coffee1","s10","n7"]], water1:[53.3,46.6,["door2","water2","s5"]], water2:[56,47.7,["water1","door2","n10"]],
+  s6:[38.8,43.6,["s4","water1"]], s4:[38.5,55.2,["s6","s5","s3","filing","n19"]], s5:[48.9,52.9,["s4","water1","filing","s9"]], filing:[47.8,57.6,["s4","s5","s9","n4"]], s3:[26.9,59.2,["s4","s1"]],
+  s1:[25.8,71,["s3","s2","n12"]], s2:[37.9,68.2,["s1","s4","s7","n2"]], s9:[55.2,66.8,["filing","s5","s7","s10"]], s10:[68.7,66.2,["s9","s8","door3","coffee1"]], s7:[52.7,78.8,["s9","s2","s8"]], s8:[65.9,75.8,["s7","s10","n22"]],
+  coffee1:[73.5,56.7,["door3","coffee2","s10"]], coffee2:[76.2,58.4,["coffee1","printer"]], printer:[81,63,["coffee2","n23"]], n2:[57.5,51.6,["s2","n5"]], n4:[44.3,63.3,["filing","n14"]], n5:[47.4,58.3,["n2"]],
+  n6:[57,52.2,["door2","n8"]], n7:[63.9,46.8,["door3"]], n8:[68.5,49.9,["n6"]], n10:[55.6,49.2,["water2"]], n12:[36.3,76.8,["s1","n13"]], n13:[25.8,72.2,["n12","n16"]], n14:[36.9,76.7,["n4"]], n16:[18.5,59.5,["n13","n18"]],
+  n18:[29.9,47.1,["n16","n20"]], n19:[18.3,57.7,["s4"]], n20:[38.8,54.2,["n18"]], n22:[76.3,70.5,["s8","n24"]], n23:[66.8,75.6,["printer"]], n24:[81.3,62.5,["n22"]],
+};
+for (const [a, [, , ns]] of Object.entries(WP)) for (const b of ns) if (!WP[b][2].includes(a)) WP[b][2].push(a);
+const HOME = { "müşteri":"door", "orkestratör":"s5", analiz:"s4", teklif:"s9", kampanya:"s10", risk:"s2", "sözleşme":"s7" };
+const SPOT = { s5:["rear-right",70], s4:["rear-left",58], s9:["front-left",55], s10:["front-right",55], s2:["rear-right",85], s7:["rear-left",95], door:["front-left",50], water1:["front-right",48] };   // facing + z at the desk
+const SKIN = { "müşteri":"explore-1", "orkestratör":"Claude-1", analiz:"dev-1", teklif:"employee-1", kampanya:"employee-2", risk:"security-audit-1", "sözleşme":"Frontend-dev-1" };
+const COL = { "müşteri":"#f2c14e", "orkestratör":"#ff7b9c", analiz:"#4fd1ff", teklif:"#4cc96a", kampanya:"#c792ea", risk:"#ff9f43", "sözleşme":"#4f8cff" };
+const FACE = { "müşteri":"🙂", "orkestratör":"😎", analiz:"🤓", teklif:"🧐", kampanya:"🤩", risk:"😬", "sözleşme":"✍️" };
+const STATION = { analiz:"CRM", teklif:"tarife kataloğu", kampanya:"kampanya motoru", risk:"kredi / risk", "sözleşme":"sözleşme" };
+const FURN = [   // [sprite, x%, y%, natural width in 800px room space]
+  ["desk-left-rear",42.4,50.4,84],["desk-left-front",46.7,53,84],["desk-right-front",39.9,55.2,84],["desk-left-rear",31.4,64.8,84],["desk-left-front",35.4,67.5,84],["desk-right-front",27.9,70,84],
+  ["desk-left-rear",59,73.7,84],["desk-left-front",62.6,76,84],["desk-right-front",55.4,78.7,84],["desk-right-rear",66.6,71.1,84],
+  ["coffee",78.5,50.2,40],["filing",45,56.5,40],["printer",85.4,56.8,55],["monstera",91.9,64.7,50],["snake",43.2,37.9,40],["money",32,71.2,42],["money",89.2,65.7,42],["monstera",60.2,80.4,50],
+];
+const IMG = {}, FACES = ["front-left", "front-right", "rear-left", "rear-right"];
+const names = ["room.jpg", ...FURN.map(f => f[0] + ".png"), ...Object.values(SKIN).flatMap(s => FACES.map(f => `${s}-${f}.png`))];
+const loaded = Promise.all([...new Set(names)].map(n => new Promise(r => { const i = new Image(); i.onload = r; i.onerror = r; i.src = "px/" + n; IMG[n] = i; })));
+const sizeOf = (n, w800) => { const i = IMG[n]; return [w800 * SC, w800 * SC * i.naturalHeight / i.naturalWidth]; };
+
+function route(a, b) {   // fewest waypoints from a to b (BFS)
+  const prev = { [a]: null }, q = [a];
+  while (q.length) { const n = q.shift(); if (n === b) break; for (const m of WP[n][2]) if (!(m in prev)) { prev[m] = n; q.push(m); } }
+  const out = []; for (let n = b; n; n = prev[n]) out.unshift(n); return out;
+}
+let D, evs, now, R, bub, nt, waiting, running, last, active, nmsg;
+const sp = () => +$("sp").value;
+const homeOf = r => r.name === "müşteri" && r.visited ? "water1" : HOME[r.name];   // the customer comes in, then waits beside the orchestrator
+const destFor = who => who === "müşteri" ? "water1" : HOME[who];
+
+function build(d) {
+  D = d; evs = d.events.map((e, i) => ({ ...e, i, done: false, queued: false })).sort((a, b) => a.t - b.t);
+  st.querySelectorAll(".bub,.nt").forEach(e => e.remove());
+  R = {}; bub = {}; waiting = {}; now = 0; active = {}; nmsg = 0; nt = {}; $("log").innerHTML = ""; $("sonuc").textContent = "…"; $("sonuc").className = "";
+  for (const a of Object.keys(COL)) { const n = HOME[a];
+    R[a] = { name: a, node: n, x: WP[n][0], y: WP[n][1], path: [], q: [], cur: null, face: SPOT[n]?.[0] || "front-left", z: SPOT[n]?.[1], wait: false, st: 0 };
+    const el = document.createElement("div"); el.className = "nt"; el.style.setProperty("--c", COL[a]); el.textContent = a; st.append(el); nt[a] = el; }
+  pill("📣 Satış ekibi çevrim içi");
+}
+const setRow = (a, cls, txt) => { const r = R[a]; if (!r) return; r.st = cls === "d" ? 2 : cls === "w" ? 1 : 0; r.wait = cls === "w" && /yanıt/.test(txt); };
+function say(a, text, cls, ms) {
+  bub[a]?.el.remove(); const el = document.createElement("div"); el.className = "bub " + (cls || ""); el.style.setProperty("--c", COL[a]); el.textContent = text; st.append(el);
+  bub[a] = { el, until: now + ms };
+}
+function pill(t) { const d = document.createElement("div"); d.className = "pill"; d.innerHTML = `<span>${t}</span>`; $("log").append(d); $("log").scrollTop = 1e5; }
+function logLine(from, to, text) {   // Slack-style channel message
+  const tool = text.startsWith("🔧"), m = Math.floor(nmsg++ / 2), clock = `20:${String(18 + m).padStart(2, "0")}`;
+  const l = document.createElement("div"); l.className = "m" + (tool ? " tool" : ""); l.style.setProperty("--c", COL[from]);
+  l.innerHTML = `<div class="av">${FACE[from]}</div><div><b>${from}</b><time>${clock}</time><div class="x">${to ? `<span style="color:${COL[to]}">@${to}</span> ` : ""}${text}</div></div>`;
+  $("log").append(l); $("log").scrollTop = 1e5; if (/^Sonuç:/.test(text)) pill("✅ " + text);
+}
+function ready(e) {   // the actor must have received everything addressed to it earlier in the script
+  if (e.t > now) return false;
+  const who = e.kind === "msg" ? e.from : e.agent;
+  return evs.every(p => !(p.kind === "msg" && p.to === who && p.i < e.i) || p.done);
+}
+function deliver(e) {
+  const { from: f, to: t } = e; say(f, e.text, "", 3); if (f === "müşteri") R[f].visited = true; logLine(f, t, e.text);
+  if (e.reply) {
+    delete waiting[t + ">" + f]; setRow(f, "d", "işini verdi");
+    for (const x of e.closes || []) { for (const k of Object.keys(waiting)) if (k.startsWith(x + ">") || (k.startsWith(t + ">") && k.endsWith(">" + x))) delete waiting[k]; setRow(x, "d", "devretti, bitti"); }
+    const w = Object.keys(waiting).find(k => k.startsWith(t + ">")); setRow(t, "w", w ? "yanıt bekliyor: " + w.split(">")[1] : "çalışıyor");
+  } else if (f !== "müşteri" && t !== "müşteri") { waiting[f + ">" + t] = 1; setRow(t, "w", "çalışıyor"); setRow(f, "w", "yanıt bekliyor: " + t); }
+}
+function startTask(r, e) { r.cur = e; r.phase = "go"; r.path = route(r.node, e.kind === "msg" ? destFor(e.to) : homeOf(r)); r.timer = 0; }
+function faceTo(r, dx, dy) { r.face = (dy < 0 ? "rear-" : "front-") + (dx < 0 ? "left" : "right"); r.z = null; }
+function step(r, dt) {
+  if (!r.cur) {
+    const e = r.q.shift(); if (e) return startTask(r, e);
+    const home = homeOf(r); if (r.node !== home) { r.path = route(r.node, home); r.phase = "home"; r.cur = { kind: "walk" }; }
+    return;
+  }
+  const e = r.cur;
+  if (r.phase === "go" || r.phase === "home") {
+    while (r.path.length && r.path[0] === r.node) r.path.shift();
+    const tgt = r.path[0];
+    if (!tgt) { r.phase = "act"; r.timer = 0; const s = SPOT[r.node]; if (s) { r.face = s[0]; r.z = s[1]; }
+      if (e.kind === "walk") { r.cur = null; return; }
+      if (e.kind === "msg") deliver(e); else if (e.kind === "tool") { say(r.name, "🔧 " + e.text, "tl", 3.2); logLine(r.name, null, "🔧 " + e.text); active[r.name] = 1; }
+      else { say(r.name, e.text, "", 2.6); logLine(r.name, null, e.text); const m = /^Sonuç:\s*(.+)/.exec(e.text); if (m) { $("sonuc").textContent = m[1]; $("sonuc").className = /satış/i.test(m[1]) ? "ok" : "no"; setRow("orkestratör", "d", "bitti"); } }
+      return; }
+    const [tx, ty] = WP[tgt], dx = tx - r.x, dy = ty - r.y, d = Math.hypot(dx, dy), s = 11 * dt;
+    if (d < s) { r.x = tx; r.y = ty; r.node = tgt; } else { r.x += dx / d * s; r.y += dy / d * s; faceTo(r, dx, dy); }
+    r.step = (r.step || 0) + dt * 11; return;
+  }
+  r.timer += dt; const dur = e.kind === "tool" ? 3.2 : 1.8;
+  if (r.timer >= dur) { if (e.kind === "tool") delete active[r.name]; e.done = true; r.cur = null; }
+}
+function frame(ts) {
+  const dt = Math.min(0.1, (ts - (last || ts)) / 1000) * sp(); last = ts; if (running) {
+    now += dt;
+    for (const e of evs) if (!e.queued && ready(e)) { e.queued = true; R[e.kind === "msg" ? e.from : e.agent].q.push(e); }
+    for (const r of Object.values(R)) step(r, dt);
+    if (evs.every(e => e.done) && Object.values(R).every(r => !r.cur && !r.q.length)) { running = false; $("pl").textContent = "▶"; }
+  }
+  draw(); requestAnimationFrame(frame);
+}
+// anchor: feet / bottom-centre at (x%, y%), same as the original (translate(-50%, -100%))
+function sprite(n, x, y, w800) { const [w, h] = sizeOf(n, w800); cv.drawImage(IMG[n], x * W / 100 - w / 2, y * H / 100 - h, w, h); }
+function draw() {
+  cv.clearRect(0, 0, W, H); cv.drawImage(IMG["room.jpg"], 0, 0, W, H);
+  const items = FURN.map(([n, x, y, w]) => ({ z: Math.round(y), f: () => sprite(n + ".png", x, y, w) }));
+  for (const r of Object.values(R)) { const moving = r.cur && (r.phase === "go" || r.phase === "home") && r.path.length;
+    items.push({ z: r.z ?? Math.round(r.y), f: () => {
+      const bob = moving ? Math.abs(Math.sin(r.step)) * 5 : 0, [px, py] = [r.x * W / 100, r.y * H / 100];
+      if (active[r.name]) { cv.fillStyle = COL[r.name] + "55"; cv.beginPath(); cv.ellipse(px, py, 34, 13, 0, 0, 7); cv.fill(); cv.strokeStyle = COL[r.name]; cv.lineWidth = 2; cv.stroke(); }
+      cv.fillStyle = "#0004"; cv.beginPath(); cv.ellipse(px, py, 22, 8, 0, 0, 7); cv.fill();
+      const n = `${SKIN[r.name]}-${r.face}.png`, [w, h] = [IMG[n].naturalWidth * 78 * SC / IMG[n].naturalHeight, 78 * SC];
+      cv.drawImage(IMG[n], px - w / 2, py - h - bob, w, h);
+      if (r.wait) { cv.fillStyle = "#fff"; for (const k of [-10, 0, 10]) { cv.beginPath(); cv.arc(px + k, py - h - 14 - bob, 3.5, 0, 7); cv.fill(); } } } }); }
+  items.sort((a, b) => a.z - b.z).forEach(i => i.f());
+  for (const [a, el] of Object.entries(nt)) { const r = R[a]; el.style.left = r.x + "%"; el.style.top = (r.y * H / 100 - 78 * SC - 8) / H * 100 + "%"; }
+  for (const [a, b] of Object.entries(bub)) { if (now > b.until) { b.el.remove(); delete bub[a]; continue; } const r = R[a]; b.el.style.left = r.x + "%"; b.el.style.top = (r.y * H / 100 - 78 * SC - 30) / H * 100 + "%"; }
+}
+$("pl").onclick = () => { if (running) { running = false; $("pl").textContent = "▶"; } else { if (evs.every(e => e.done)) build(D); running = true; $("pl").textContent = "⏸"; } };
+$("rs").onclick = () => { build(D); running = true; $("pl").textContent = "⏸"; };
+loaded.then(() => fetch(new URLSearchParams(location.search).get("data") || "telekom-ag.json")).then(r => r.json()).then(d => { build(d); running = true; requestAnimationFrame(frame); });
+</script>
+</body>
+</html>

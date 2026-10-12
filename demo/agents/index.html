@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusOS · Yaşayan agent'lar</title>
+<style>
+  :root { --bg: #070b14; --fg: #cfe3ff; --dim: #4a5b78; --line: #22355a; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 14px system-ui, sans-serif; overflow: hidden; }
+  canvas { position: fixed; inset: 0; width: 100vw; height: 100vh; }
+  header { position: fixed; top: 16px; left: 20px; }
+  header h1 { margin: 0; font-size: 18px; letter-spacing: .08em; font-weight: 600; }
+  header p { margin: 4px 0 0; color: var(--dim); }
+  #log { position: fixed; right: 0; top: 0; bottom: 64px; width: 330px; overflow: hidden; padding: 16px;
+         box-sizing: border-box; background: linear-gradient(90deg, transparent, #0b1222 20%); font-size: 12px; }
+  #log div { padding: 4px 0; border-bottom: 1px solid #111c33; color: #8fa6c8; }
+  #log b { color: var(--fg); font-weight: 600; }
+  #bar { position: fixed; left: 0; right: 0; bottom: 0; height: 64px; display: flex; gap: 12px; align-items: center;
+         padding: 0 20px; background: #0b1222; border-top: 1px solid var(--line); }
+  #bar button { background: #13203a; color: var(--fg); border: 1px solid #2c4a7c; border-radius: 22px;
+                min-width: 44px; height: 44px; font-size: 15px; cursor: pointer; }
+  #bar button.on { background: #2c4a7c; }
+  #bar input { flex: 1; accent-color: #4fd1ff; height: 44px; }
+  #bar span { color: var(--dim); min-width: 90px; text-align: right; }
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<header><h1>NEXUSOS · YAŞAYAN AGENT'LAR</h1><p>Bu proje oturumunun gerçek kaydı, tekrar oynatılıyor.</p></header>
+<div id="log"></div>
+<div id="bar">
+  <button id="play" aria-label="Oynat/duraklat">❚❚</button>
+  <button data-s="1" class="on">1×</button><button data-s="4">4×</button><button data-s="16">16×</button>
+  <input id="seek" type="range" min="0" value="0" aria-label="Zaman çizelgesi">
+  <span id="pos"></span>
+</div>
+<script>
+let STATIONS = {   // office layout, fractions of the stage (left 75% of the screen)
+  desk:     { label: "senin masan",   x: .10, y: .55, color: "#f2c14e" },
+  terminal: { label: "terminal",      x: .32, y: .25, color: "#7ee787" },
+  files:    { label: "dosyalar",      x: .55, y: .22, color: "#4fd1ff" },
+  web:      { label: "web",           x: .70, y: .45, color: "#c792ea" },
+  drive:    { label: "drive",         x: .55, y: .78, color: "#ffab70" },
+  panel:    { label: "panel",         x: .32, y: .80, color: "#79c0ff" },
+  library:  { label: "kütüphane",     x: .70, y: .80, color: "#8b949e" },
+  meeting:  { label: "toplantı",      x: .40, y: .52, color: "#ff7b9c" },
+};
+const COLORS = { claude: "#4fd1ff", sen: "#f2c14e" };
+let HOME = "claude", USER = "sen", USERDESK = "desk", PALETTE = {};
+const SUBCOLORS = ["#7ee787", "#c792ea", "#ffab70", "#ff7b9c"];
+
+const cv = document.getElementById("c"), ctx = cv.getContext("2d");
+const dpr = devicePixelRatio || 1;
+function resize() { cv.width = innerWidth * dpr; cv.height = innerHeight * dpr; }
+addEventListener("resize", resize); resize();
+const stageW = () => Math.min(cv.width - 330 * dpr, cv.width), stageH = () => cv.height - 64 * dpr;
+const at = (s) => [STATIONS[s].x * stageW(), 70 * dpr + STATIONS[s].y * (stageH() - 90 * dpr)];
+
+let timeline = [], idx = 0, speed = 1, playing = true, acc = 0;
+const agents = {}, beams = [];
+const STEP = 1.1;   // seconds per event at 1×; real gaps (hours) are compressed
+
+function agent(name) {
+  if (!agents[name]) {
+    const color = PALETTE[name] ?? COLORS[name] ?? SUBCOLORS[(parseInt(name.split(" ")[1]) - 1) % SUBCOLORS.length];
+    const [x, y] = at(name === USER ? USERDESK : "meeting");
+    const sub = name !== HOME && name !== USER;
+    agents[name] = { name, color, x, y, tx: x, ty: y, bubble: "", bubbleT: 0, alive: !sub, fade: 1, sub };
+  }
+  return agents[name];
+}
+
+function apply(e) {
+  const a = agent(e.agent);
+  a.alive = true; a.fade = 1;
+  if (e.station) {
+    const [x, y] = at(e.station);
+    const jitter = a.sub ? ((a.slot ??= Object.keys(agents).indexOf(a.name)) % 3 - 1) * 45 * dpr : 0;
+    a.tx = x + jitter; a.ty = y + 34 * dpr + (a.name === HOME ? 0 : 10 * dpr);
+    if (e.station === USERDESK && a.name !== USER) a.tx += 80 * dpr;   // talk to the user side by side
+  }
+  if (e.kind === "user") {   // Claude walks over to listen
+    const c = agent(HOME); const [x, y] = at(USERDESK); c.tx = x + 70 * dpr; c.ty = y;
+  }
+  if (e.kind === "spawn" && e.child) {
+    const ch = agent(e.child); ch.alive = true; ch.x = a.x; ch.y = a.y;
+    beams.push({ from: a, to: ch, life: 1, color: ch.color });
+  }
+  if (e.kind === "report") {
+    beams.push({ from: a, to: agent(HOME), life: 1, color: a.color });
+    a.leaving = true;
+  }
+  a.bubble = e.text; a.bubbleT = 1;
+  const log = document.getElementById("log");
+  const row = document.createElement("div");
+  row.innerHTML = `<b style="color:${a.color}">${a.name}</b> · ${e.text.replace(/</g, "&lt;")}`;
+  log.prepend(row); while (log.children.length > 40) log.lastChild.remove();
+}
+
+function seekTo(n) {   // rebuild state by replaying from the start (fast enough for a few thousand events)
+  for (const k of Object.keys(agents)) delete agents[k];
+  beams.length = 0; document.getElementById("log").innerHTML = "";
+  agent(USER); agent(HOME);
+  for (idx = 0; idx < n; idx++) apply(timeline[idx]);
+  for (const a of Object.values(agents)) { a.x = a.tx; a.y = a.ty; }
+}
+
+function bubble(a) {
+  if (a.bubbleT <= 0.02 || !a.bubble) return;
+  ctx.globalAlpha = Math.min(1, a.bubbleT * 1.5) * a.fade;
+  ctx.font = `${12 * dpr}px system-ui`;
+  const w = Math.min(ctx.measureText(a.bubble).width + 20 * dpr, 300 * dpr), h = 26 * dpr;
+  const bx = Math.max(8 * dpr, Math.min(a.x - w / 2, stageW() - w - 8 * dpr)), by = a.y - 46 * dpr;
+  ctx.fillStyle = "#0d1628"; ctx.strokeStyle = a.color; ctx.lineWidth = 1.5 * dpr;
+  ctx.beginPath(); ctx.roundRect(bx, by, w, h, 8 * dpr); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = "#cfe3ff"; ctx.textAlign = "left";
+  ctx.save(); ctx.beginPath(); ctx.rect(bx + 8 * dpr, by, w - 16 * dpr, h); ctx.clip();
+  ctx.fillText(a.bubble, bx + 10 * dpr, by + 17 * dpr); ctx.restore();
+  ctx.globalAlpha = 1;
+}
+
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min((now - last) / 1000, 0.1); last = now;
+  if (playing && idx < timeline.length) {
+    acc += dt * speed;
+    while (acc >= STEP && idx < timeline.length) { acc -= STEP; apply(timeline[idx++]); }
+  }
+  document.getElementById("seek").value = idx;
+  document.getElementById("pos").textContent = `${idx} / ${timeline.length}`;
+
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  for (const [k, s] of Object.entries(STATIONS)) {   // stations
+    const [x, y] = at(k);
+    ctx.strokeStyle = s.color + "55"; ctx.fillStyle = s.color + "12"; ctx.lineWidth = 2 * dpr;
+    ctx.beginPath(); ctx.roundRect(x - 60 * dpr, y - 18 * dpr, 120 * dpr, 36 * dpr, 10 * dpr); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = s.color + "cc"; ctx.font = `${12 * dpr}px system-ui`; ctx.textAlign = "center";
+    ctx.fillText(s.label, x, y + 4 * dpr);
+  }
+  for (let i = beams.length - 1; i >= 0; i--) {     // spawn / report beams
+    const b = beams[i]; b.life -= dt * 0.6 * Math.max(1, speed / 2);
+    if (b.life <= 0) { beams.splice(i, 1); continue; }
+    ctx.strokeStyle = b.color; ctx.globalAlpha = b.life; ctx.lineWidth = 3 * dpr; ctx.setLineDash([8 * dpr, 6 * dpr]);
+    ctx.beginPath(); ctx.moveTo(b.from.x, b.from.y); ctx.lineTo(b.to.x, b.to.y); ctx.stroke();
+    ctx.setLineDash([]); ctx.globalAlpha = 1;
+  }
+  for (const a of Object.values(agents)) {          // characters
+    if (!a.alive) continue;
+    a.x += (a.tx - a.x) * Math.min(1, dt * 4); a.y += (a.ty - a.y) * Math.min(1, dt * 4);
+    a.bubbleT -= dt * 0.35 * Math.max(1, speed / 2);
+    if (a.leaving) { a.fade -= dt * 0.25; if (a.fade <= 0) { a.alive = false; a.leaving = false; } }
+    const r = (a.name === HOME ? 18 : 13) * dpr;
+    ctx.globalAlpha = Math.max(a.fade, 0);
+    ctx.shadowColor = a.color; ctx.shadowBlur = 18 * dpr;
+    ctx.fillStyle = a.color; ctx.beginPath(); ctx.arc(a.x, a.y, r, 0, 7); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#070b14"; ctx.font = `bold ${11 * dpr}px system-ui`; ctx.textAlign = "center";
+    ctx.fillText(a.name.match(/\d+$/)?.[0] ?? a.name[0].toUpperCase(), a.x, a.y + 4 * dpr);
+    ctx.fillStyle = a.color; ctx.font = `${11 * dpr}px system-ui`;
+    ctx.fillText(a.name, a.x, a.y + r + 14 * dpr);
+    ctx.globalAlpha = 1;
+    bubble(a);
+  }
+  requestAnimationFrame(frame);
+}
+
+const params = new URLSearchParams(location.search);
+fetch(params.get("data") || "timeline.json").then(r => r.json()).then(t => {
+  if (!Array.isArray(t)) {   // scenario file: {title, stations, agents, events}
+    STATIONS = t.stations; document.querySelector("header h1").textContent = t.title.toUpperCase();
+    document.querySelector("header p").textContent = "Senaryo: agent'lar kendi görevleriyle müşteriyi ikna etmeye çalışıyor.";
+    const names = Object.keys(t.agents); [USER, HOME] = names; USERDESK = t.events.find(e => e.agent === USER).station;
+    names.forEach((n, i) => PALETTE[n] = Object.values(STATIONS)[i % Object.keys(STATIONS).length].color);
+    PALETTE[HOME] = "#4fd1ff";
+    t = t.events;
+  }
+  for (const k of Object.keys(agents)) delete agents[k];
+  agent(USER); agent(HOME);
+  timeline = t;
+  const seek = document.getElementById("seek");
+  seek.max = t.length;
+  seek.oninput = () => seekTo(+seek.value);
+  const start = params.get("at");
+  if (start) seekTo(+start);
+  requestAnimationFrame(frame);
+});
+document.getElementById("play").onclick = (ev) => { playing = !playing; ev.target.textContent = playing ? "❚❚" : "▶"; };
+for (const b of document.querySelectorAll("[data-s]")) b.onclick = () => {
+  speed = +b.dataset.s; document.querySelectorAll("[data-s]").forEach(x => x.classList.toggle("on", x === b));
+};
+</script>
+</body>
+</html>

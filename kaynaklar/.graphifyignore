@@ -1,0 +1,7 @@
+# ponytail: görseller ve video grafa girmiyor (görsel başına bir alt ajan); metin karşılıkları var:
+# rakip ekranları -> manus/Rekabet Analizi, video -> drive/video/demo sahneler.md
+manus/vr-showcase/gorseller/
+manus/vr-showcase.zip
+drive/video/*.mp4
+drive/video/*.jpg
+graphify-out/

@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusOS · Agent ofisi</title>
+<style>
+  :root { --bg:#0a0d16; --fg:#dfe6f5; --dim:#7b86a0; --panel:#11151f; --line:#222a3a; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,sans-serif; padding:14px; }
+  .win { max-width:1280px; margin:auto; background:var(--panel); border:1px solid var(--line); border-radius:12px; overflow:hidden; box-shadow:0 10px 40px #0008; }
+  .bar { display:flex; align-items:center; gap:8px; padding:8px 12px; background:#171a24; border-bottom:1px solid var(--line); }
+  .bar i { width:11px; height:11px; border-radius:50%; } .bar .t { flex:1; text-align:center; font:11px/1 ui-monospace,monospace; letter-spacing:.25em; color:#6c7590; }
+  .bar button, .bar select { background:#1d2230; color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:3px 9px; font:inherit; font-size:12px; cursor:pointer; }
+  .bar a { color:var(--dim); font-size:12px; text-decoration:none; }
+  .body { display:grid; grid-template-columns:minmax(0,1fr) 340px; }
+  @media (max-width:900px) { .body { grid-template-columns:1fr; } .chat { height:360px; } }
+  #st { position:relative; aspect-ratio:900/640; background:#0b0f19; }
+  canvas { position:absolute; inset:0; width:100%; height:100%; image-rendering:pixelated; }
+  .nt { position:absolute; transform:translate(-50%,-100%); font:600 10px system-ui; padding:0 6px; border-radius:6px; background:#0b0f19cc; color:var(--c); border:1px solid var(--c); white-space:nowrap; pointer-events:none; }
+  .lb { position:absolute; transform:translate(-50%,-100%); font:600 10px system-ui; color:#c7d3ea; background:#0b0f19aa; border-radius:5px; padding:0 6px; white-space:nowrap; pointer-events:none; }
+  .bub { position:absolute; transform:translate(-50%,-100%); max-width:200px; background:#fffffff2; color:#1d2433; border:2px solid var(--c); border-radius:10px; padding:3px 8px; font-size:12px; z-index:5; pointer-events:none; }
+  .bub.tl { color:#5b6578; border-style:dashed; }
+  .chat { position:relative; border-left:1px solid var(--line); background:#0e121b; }
+  .chat > div { position:absolute; inset:0; display:flex; flex-direction:column; }
+  .ch { padding:10px 12px; border-bottom:1px solid var(--line); font-weight:700; display:flex; gap:8px; align-items:center; } .ch small { color:var(--dim); font-weight:400; margin-left:auto; }
+  #log { flex:1; overflow:auto; padding:8px 10px; }
+  .m { display:flex; gap:9px; margin:9px 0; } .av { width:34px; height:34px; border-radius:8px; background:var(--c); display:grid; place-items:center; font-size:19px; flex:none; }
+  .m b { color:var(--c); } .m time { color:var(--dim); font-size:11px; margin-left:6px; } .m .x { color:#d5dcec; } .m.tool .x { color:var(--dim); font-style:italic; }
+  .pill { text-align:center; margin:12px 0; } .pill span { background:#171d2b; border:1px solid var(--line); color:var(--dim); border-radius:999px; padding:2px 12px; font-size:12px; }
+  .in { margin:8px 10px 10px; padding:9px 12px; border:1px solid var(--line); border-radius:8px; color:#566079; background:#0b0f18; }
+  #sonuc { font-weight:700; } .ok { color:#6ee7a0; } .no { color:#ff7a7a; }
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i>
+    <span class="t">NEXUSOS — AGENT OFİSİ</span><span id="baslik" style="color:var(--dim);font-size:12px"></span>
+    <a href="town.html#izo">kasaba</a><a href="kupler.html">kristal</a>
+    <button id="pl">⏸</button><button id="rs">⏮</button><select id="sp"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select></div>
+  <div class="body">
+    <div id="st"><canvas id="cv" width="450" height="320"></canvas></div>
+    <div class="chat"><div><div class="ch"># satis-ofisi <small>sonuç: <span id="sonuc">…</span></small></div><div id="log"></div><div class="in">Mesaj #satis-ofisi</div></div></div>
+  </div>
+</div>
+<script>
+// Isometric office in the style of pixel-agents: a room with windows, desks and monitors; agents walk to each other's desks, a chat channel logs what they say.
+const LW = 900, LH = 640, T = 12, cv = $("cv").getContext("2d");
+const K = .62, OX = 330, OY = 190, WH = 150, RX = 816, RYW = 480;
+const pr = (x, y) => [OX + (x - y) * K, OY + (x + y) * K / 2];   // room px -> logical canvas px (canvas is drawn at half resolution, then scaled up: chunky pixels)
+const CX = [10, 26, 42, 58], RY = [12, 24, 36];   // aisle grid: node (c, r) is where an agent stands
+const PLACE = { giris:[3,0], musteri:[1,1], crm:[0,0], katalog:[2,0], kampanya:[3,1], risk:[2,2], sozlesme:[0,2] };
+const HOME = { "müşteri":"giris", "orkestratör":"musteri", analiz:"crm", teklif:"katalog", kampanya:"kampanya", risk:"risk", "sözleşme":"sozlesme" };
+const COL = { "müşteri":"#f2c14e", "orkestratör":"#ff7b9c", analiz:"#4fd1ff", teklif:"#4cc96a", kampanya:"#c792ea", risk:"#ff9f43", "sözleşme":"#4f8cff" };
+const FACE = { "müşteri":"🙂", "orkestratör":"😎", analiz:"🤓", teklif:"🧐", kampanya:"🤩", risk:"😬", "sözleşme":"✍️" };
+const HAIR = { "müşteri":"#8a5a2b", "orkestratör":"#2b2230", analiz:"#3b2a1d", teklif:"#c9a24a", kampanya:"#7a2f2f", risk:"#222", "sözleşme":"#5b4636" };
+function $(id) { return document.getElementById(id); }
+const st = $("st"), node = ([c, r]) => [CX[c] * T, RY[r] * T];
+function route(a, b) {   // shortest way over the road grid (BFS), as a list of nodes
+  const key = ([c, r]) => c + "," + r, prev = { [key(a)]: null }, q = [a];
+  while (q.length) { const n = q.shift(); if (key(n) === key(b)) break;
+    for (const [dc, dr] of [[1,0],[-1,0],[0,1],[0,-1]]) { const m = [n[0] + dc, n[1] + dr];
+      if (m[0] < 0 || m[0] > 3 || m[1] < 0 || m[1] > 2 || key(m) in prev) continue; prev[key(m)] = n; q.push(m); } }
+  const out = []; for (let n = b; n; n = prev[key(n)]) out.unshift(n); return out;
+}
+let D, evs, now, R, bub, lb, nt, waiting, running, last, active, nmsg;
+const sp = () => +$("sp").value;
+const idx = a => Object.keys(COL).indexOf(a);
+const homeOf = r => r.name === "müşteri" && r.visited ? "musteri" : HOME[r.name];   // the customer walks in and stays at the front desk
+
+function build(d) {
+  D = d; evs = d.events.map((e, i) => ({ ...e, i, done: false, queued: false })).sort((a, b) => a.t - b.t);
+  $("baslik").textContent = ""; st.querySelectorAll(".bub,.lb,.nt").forEach(e => e.remove());
+  R = {}; bub = {}; waiting = {}; now = 0; active = {}; nmsg = 0; nt = {}; $("log").innerHTML = ""; $("sonuc").textContent = "…"; $("sonuc").className = "";
+  for (const a of Object.keys(COL)) { const n = PLACE[HOME[a]], [x, y] = node(n);
+    R[a] = { name: a, node: n, x: x + (idx(a) % 3 - 1) * 6, y: y + 6 + idx(a) % 2 * 5, path: null, q: [], cur: null, hasTask: a === "müşteri" || a === "orkestratör", face: 1, wait: false, st: 0 };
+    const el = document.createElement("div"); el.className = "nt"; el.style.setProperty("--c", COL[a]); el.textContent = a; st.append(el); nt[a] = el; }
+  for (const [k, n] of Object.entries(PLACE)) { if (k === "giris") continue; const g = deskGeo(k, n), [lx, ly] = pr((g.x0 + g.x1) / 2, g.y0);
+    const el = document.createElement("div"); el.className = "lb"; el.style.cssText = `left:${lx / 9}%;top:${(ly - 56) / 6.4}%`; el.textContent = k === "musteri" ? "satış kanalı · orkestratör" : (d.stations[k]?.label || k); st.append(el); }
+  pill("📣 Satış ekibi çevrim içi");
+}
+const setRow = (a, cls, txt) => { const r = R[a]; if (!r) return; r.st = cls === "d" ? 2 : cls === "w" ? 1 : 0; r.wait = cls === "w" && /yanıt/.test(txt); };   // also drives the whiteboard post-its
+function say(a, text, cls, ms) {
+  bub[a]?.el.remove(); const el = document.createElement("div"); el.className = "bub " + (cls || ""); el.style.setProperty("--c", COL[a]); el.textContent = text; st.append(el);
+  bub[a] = { el, until: now + ms };
+}
+function pill(t) { const d = document.createElement("div"); d.className = "pill"; d.innerHTML = `<span>${t}</span>`; $("log").append(d); $("log").scrollTop = 1e5; }
+function logLine(from, to, text) {   // Slack-style channel message
+  const tool = text.startsWith("🔧"), m = Math.floor(nmsg++ / 2), clock = `20:${String(18 + m).padStart(2, "0")}`;
+  const l = document.createElement("div"); l.className = "m" + (tool ? " tool" : ""); l.style.setProperty("--c", COL[from]);
+  l.innerHTML = `<div class="av">${FACE[from]}</div><div><b>${from}</b><time>${clock}</time><div class="x">${to ? `<span style="color:${COL[to]}">@${to}</span> ` : ""}${text}</div></div>`;
+  $("log").append(l); $("log").scrollTop = 1e5;
+  if (/^Sonuç:/.test(text)) pill("✅ " + text);
+}
+function ready(e) {   // the actor must have received everything addressed to it earlier in the script
+  if (e.t > now) return false;
+  const who = e.kind === "msg" ? e.from : e.agent;
+  return evs.every(p => !(p.kind === "msg" && p.to === who && p.i < e.i) || p.done);
+}
+function deliver(e) {   // the walker has arrived: say it, update statuses
+  const { from: f, to: t } = e; say(f, e.text, "", 3); if (f === "müşteri") R[f].visited = true;
+  logLine(f, t, e.text); R[t].hasTask = true;
+  if (e.reply) {
+    delete waiting[t + ">" + f]; setRow(f, "d", "işini verdi");
+    for (const x of e.closes || []) { for (const k of Object.keys(waiting)) if (k.startsWith(x + ">") || (k.startsWith(t + ">") && k.endsWith(">" + x))) delete waiting[k]; setRow(x, "d", "devretti, bitti"); }
+    const w = Object.keys(waiting).find(k => k.startsWith(t + ">")); setRow(t, "w", w ? "yanıt bekliyor: " + w.split(">")[1] : "çalışıyor");
+  } else if (f !== "müşteri" && t !== "müşteri") { waiting[f + ">" + t] = 1; setRow(t, "w", "çalışıyor"); setRow(f, "w", "yanıt bekliyor: " + t); }
+}
+function startTask(r, e) {
+  r.cur = e;
+  if (e.kind === "msg") { r.path = route(r.node, PLACE[e.to === "müşteri" ? "musteri" : HOME[e.to]]); r.phase = "go"; }   // the customer is met at the store
+  else { r.path = route(r.node, PLACE[homeOf(r)]); r.phase = "go"; }   // tool/say happen at home
+  r.timer = 0;
+}
+function step(r, dt) {
+  if (!r.cur) {
+    const e = r.q.shift();
+    if (e) return startTask(r, e);
+    const home = PLACE[homeOf(r)];   // idle: go home
+    if (r.node[0] !== home[0] || r.node[1] !== home[1]) { r.path = route(r.node, home); r.phase = "home"; r.cur = { kind: "walk" }; }
+    return;
+  }
+  const e = r.cur;
+  if (r.phase === "go" || r.phase === "home") {   // walk along the nodes of the path
+    while (r.path.length && r.path[0][0] === r.node[0] && r.path[0][1] === r.node[1]) r.path.shift();
+    const tgt = r.path[0];
+    if (!tgt) { r.phase = "act"; r.timer = 0;
+      if (e.kind === "walk") { r.cur = null; return; }
+      if (e.kind === "msg") deliver(e); else if (e.kind === "tool") { say(r.name, "🔧 " + e.text, "tl", 3.2); logLine(r.name, null, "🔧 " + e.text); active[HOME[r.name]] = 1; }
+      else { say(r.name, e.text, "", 2.6); logLine(r.name, null, e.text); const m = /^Sonuç:\s*(.+)/.exec(e.text); if (m) { $("sonuc").textContent = m[1]; $("sonuc").className = /satış/i.test(m[1]) ? "ok" : "no"; setRow("orkestratör", "d", "bitti"); } }
+      return; }
+    const [tx, ty] = node(tgt), ox = (idx(r.name) % 3 - 1) * 6, oy = 6 + idx(r.name) % 2 * 5, dx = tx + ox - r.x, dy = ty + oy - r.y, d = Math.hypot(dx, dy), s = 14 * T * 0.5 * dt;
+    if (d < s) { r.x = tx + ox; r.y = ty + oy; r.node = tgt; } else { r.x += dx / d * s; r.y += dy / d * s; if (Math.abs(dx) > 1) r.face = Math.sign(dx); }
+    r.step = (r.step || 0) + dt * 12; return;
+  }
+  r.timer += dt;   // acting: stay put for a moment
+  const dur = e.kind === "tool" ? 3.2 : 1.8;
+  if (r.timer >= dur) { if (e.kind === "tool") delete active[HOME[r.name]]; e.done = true; r.cur = null; }
+}
+function frame(ts) {
+  const dt = Math.min(0.1, (ts - (last || ts)) / 1000) * sp(); last = ts; if (running) {
+    now += dt;
+    for (const e of evs) if (!e.queued && ready(e)) { e.queued = true; R[e.kind === "msg" ? e.from : e.agent].q.push(e); }
+    for (const r of Object.values(R)) step(r, dt);
+    if (evs.every(e => e.done) && Object.values(R).every(r => !r.cur && !r.q.length)) { running = false; $("pl").textContent = "▶"; }
+  }
+  draw(); requestAnimationFrame(frame);
+}
+
+// ---- drawing: everything in room coordinates, projected isometrically
+const P3 = (x, y, z) => { const [a, b] = pr(x, y); return [a, b - z]; };
+function poly(pts, fill, stroke, lw) {
+  cv.beginPath(); pts.forEach(([a, b], i) => i ? cv.lineTo(a, b) : cv.moveTo(a, b)); cv.closePath();
+  if (fill) { cv.fillStyle = fill; cv.fill(); } if (stroke) { cv.strokeStyle = stroke; cv.lineWidth = lw || 2; cv.stroke(); }
+}
+const flat = (x0, y0, x1, y1, z = 0) => [P3(x0, y0, z), P3(x1, y0, z), P3(x1, y1, z), P3(x0, y1, z)];
+function box(x0, y0, x1, y1, z0, z1, top, left, right) {   // visible faces: y=y1 (front-left), x=x1 (front-right), top
+  poly([P3(x0, y1, z0), P3(x1, y1, z0), P3(x1, y1, z1), P3(x0, y1, z1)], left);
+  poly([P3(x1, y0, z0), P3(x1, y1, z0), P3(x1, y1, z1), P3(x1, y0, z1)], right);
+  poly(flat(x0, y0, x1, y1, z1), top);
+}
+const hash = (a, b) => ((a * 73856093) ^ (b * 19349663)) >>> 0;
+const deskGeo = (k, n) => { const [x, y] = node(n), w = k === "musteri" ? 132 : 96; return { x0: x + 14, x1: x + 14 + w, y1: y - 10, y0: y - 58, w }; };
+function wall() {
+  poly([P3(0, 0, 0), P3(0, RYW, 0), P3(0, RYW, WH), P3(0, 0, WH)], "#8ea3b8");            // left wall (x=0), windows
+  poly([P3(0, 0, 0), P3(RX, 0, 0), P3(RX, 0, WH), P3(0, 0, WH)], "#c9d2dc");              // right wall (y=0): door, board
+  poly([P3(0, 0, 0), P3(0, 0, WH), P3(6, 0, WH), P3(6, 0, 0)], "#6b7d90");                 // corner shadow
+  for (const [a, b] of [[44, 156], [176, 288], [308, 420]]) {   // three big windows with a faint city
+    poly([P3(0, a, 38), P3(0, b, 38), P3(0, b, 132), P3(0, a, 132)], "#9fd2f2");
+    poly([P3(0, a, 38), P3(0, b, 38), P3(0, b, 70), P3(0, a, 70)], "#c9e6f7");
+    for (let i = 0; i < 5; i++) { const y0 = a + 8 + i * 22, h = 34 + (hash(a, i) % 40); poly([P3(0, y0, 38), P3(0, y0 + 16, 38), P3(0, y0 + 16, 38 + h), P3(0, y0, 38 + h)], "#7aa6c4"); }
+    poly([P3(0, a, 38), P3(0, b, 38), P3(0, b, 132), P3(0, a, 132)], null, "#e8eef4", 3); const m = (a + b) / 2; cv.strokeStyle = "#e8eef4"; cv.lineWidth = 3; cv.beginPath(); cv.moveTo(...P3(0, m, 38)); cv.lineTo(...P3(0, m, 132)); cv.stroke();
+  }
+  poly([P3(650, 0, 0), P3(730, 0, 0), P3(730, 0, 104), P3(650, 0, 104)], "#5a4030", "#3d2b20", 3);   // door
+  poly([P3(718, 0, 50), P3(724, 0, 50), P3(724, 0, 56), P3(718, 0, 56)], "#e8c15a");
+  poly([P3(205, 0, 50), P3(405, 0, 50), P3(405, 0, 122), P3(205, 0, 122)], "#f7f9fb", "#8a97a8", 3);   // whiteboard
+  for (let i = 0; i < 3; i++) { const x0 = 210 + i * 64; poly([P3(x0, 0, 112), P3(x0 + 58, 0, 112), P3(x0 + 58, 0, 118), P3(x0, 0, 118)], ["#e86a5f", "#f0b429", "#4cc96a"][i]); }
+  const cnt = [0, 0, 0]; for (const a of Object.keys(COL)) { if (a === "müşteri") continue; const s = R[a].st, j = cnt[s]++, x0 = 214 + s * 64 + (j % 2) * 26, z0 = 90 - Math.floor(j / 2) * 18;
+    poly([P3(x0, 0, z0), P3(x0 + 22, 0, z0), P3(x0 + 22, 0, z0 + 14), P3(x0, 0, z0 + 14)], COL[a]); }   // post-it per agent, moves To do / Doing / Done
+  poly([P3(92, 0, 52), P3(150, 0, 52), P3(150, 0, 112), P3(92, 0, 112)], "#1b2233", "#8a97a8", 3); poly([P3(106, 0, 70), P3(136, 0, 70), P3(136, 0, 96), P3(106, 0, 96)], "#f08a3c");   // poster
+  cv.fillStyle = "#f4f4f4"; cv.beginPath(); cv.arc(...P3(540, 0, 112), 14, 0, 7); cv.fill(); cv.strokeStyle = "#445"; cv.lineWidth = 3; cv.stroke();
+  cv.beginPath(); cv.moveTo(...P3(540, 0, 112)); cv.lineTo(...P3(540, 0, 123)); cv.moveTo(...P3(540, 0, 112)); cv.lineTo(...P3(548, 0, 112)); cv.stroke();
+  poly([P3(0, 438, 14), P3(0, 450, 14), P3(0, 450, 54), P3(0, 438, 54)], "#d0342c");   // fire extinguisher
+}
+function floor() {
+  for (let j = 0; j < RYW / 24; j++) { let x = -(hash(j, 1) % 60); while (x < RX) { const w = 70 + hash(j, x) % 60, a = Math.max(0, x), b = Math.min(RX, x + w);
+    if (b > a) poly(flat(a, j * 24, b, j * 24 + 24), ["#b0825a", "#a97b53", "#b88b62", "#a47650", "#ad7f57"][hash(j, x) % 5], "#8a6140", 1); x += w; } }
+  cv.globalCompositeOperation = "lighter";   // sunlight from the windows
+  for (const [a, b] of [[44, 156], [176, 288], [308, 420]]) poly([P3(0, a, 0), P3(0, b, 0), P3(300, b + 130, 0), P3(300, a + 130, 0)], "rgba(255,230,160,.16)");
+  cv.globalCompositeOperation = "source-over";
+  for (const [k, n] of Object.entries(PLACE)) if (k !== "giris") { const g = deskGeo(k, n); poly(flat(g.x0 - 26, g.y0 - 10, g.x1 + 6, g.y1 + 34), "rgba(86,104,128,.55)"); }   // rugs
+}
+function desk(k, n) {
+  const g = deskGeo(k, n), on = active[k], col = COL[Object.keys(HOME).find(a => HOME[a] === k)] || "#4fd1ff";
+  for (const [lx, ly] of [[g.x0 + 3, g.y0 + 3], [g.x1 - 6, g.y0 + 3], [g.x0 + 3, g.y1 - 6], [g.x1 - 6, g.y1 - 6]]) box(lx, ly, lx + 3, ly + 3, 0, 20, "#8794a6", "#8794a6", "#6f7c8f");
+  box(g.x0, g.y0, g.x1, g.y1, 20, 24, "#eef2f7", "#cfd7e2", "#b9c3d1");
+  box(g.x0 + 10, g.y0 + 6, g.x0 + 36, g.y0 + 10, 24, 25, "#2a3140", "#2a3140", "#1f2430");    // PC tower behind
+  const nm = k === "musteri" ? 3 : 2;
+  for (let i = 0; i < nm; i++) { const mx = g.x0 + 16 + i * 30;
+    box(mx + 10, g.y0 + 14, mx + 14, g.y0 + 18, 24, 30, "#3a4252", "#3a4252", "#2c3342");   // stand
+    box(mx, g.y0 + 14, mx + 26, g.y0 + 17, 30, 50, "#222a38", on ? col : "#10233d", "#171d29");   // screen (front face lights up while working)
+    if (on) poly([P3(mx + 3, g.y0 + 17, 36), P3(mx + 23, g.y0 + 17, 36), P3(mx + 23, g.y0 + 17, 38), P3(mx + 3, g.y0 + 17, 38)], "#ffffffcc");
+    else poly([P3(mx + 3, g.y0 + 17, 38), P3(mx + 17, g.y0 + 17, 38), P3(mx + 17, g.y0 + 17, 40), P3(mx + 3, g.y0 + 17, 40)], "#4fd1ff88"); }
+  box(g.x0 + 24, g.y1 - 18, g.x0 + 54, g.y1 - 8, 24, 25, "#2a3140", "#2a3140", "#1f2430");    // keyboard
+  const cx = g.x0 + 44, cy = g.y1 + 10;   // chair
+  box(cx, cy, cx + 20, cy + 18, 12, 16, "#3a4a66", "#3a4a66", "#2f3c54"); box(cx, cy + 18, cx + 20, cy + 21, 16, 36, "#3a4a66", "#3a4a66", "#2f3c54");
+}
+function plant(x, y) { const [a, b] = pr(x, y); poly(flat(x - 7, y - 7, x + 7, y + 7, 10), "#9a6a45"); cv.fillStyle = "#3f8f4a"; for (const [dx, dy, r] of [[0, -18, 11], [-8, -12, 8], [8, -12, 8], [0, -26, 7]]) { cv.beginPath(); cv.arc(a + dx, b + dy, r, 0, 7); cv.fill(); } }
+function cooler(x, y) { box(x, y, x + 16, y + 16, 0, 30, "#e9eef4", "#d7dee8", "#bfc9d6"); cv.fillStyle = "#7cc7ee"; const [a, b] = pr(x + 8, y + 8); cv.fillRect(a - 7, b - 56, 14, 22); }
+function printer(x, y) { box(x, y, x + 56, y + 40, 0, 26, "#d9dee6", "#c3cad6", "#aeb7c5"); box(x + 6, y + 6, x + 46, y + 32, 26, 40, "#eef1f5", "#dfe4ea", "#c9d0da"); }
+function person(r) {
+  const c = COL[r.name], [px, py] = pr(r.x, r.y), moving = r.cur && (r.phase === "go" || r.phase === "home") && r.path?.length, sw = moving ? Math.sin(r.step) * 3 : 0, bob = moving ? Math.abs(Math.sin(r.step)) * 1.5 : 0;
+  const x = Math.round(px), y = Math.round(py - bob), R_ = (a, b, w, h, col) => { cv.fillStyle = col; cv.fillRect(x + a, y + b, w, h); };
+  cv.fillStyle = "#0004"; cv.beginPath(); cv.ellipse(x, py + 1, 9, 4, 0, 0, 7); cv.fill();
+  R_(-6, -10 + sw / 3, 5, 10, "#2d3550"); R_(1, -10 - sw / 3, 5, 10, "#2d3550"); R_(-7, -2 + sw / 3, 6, 3, "#171b26"); R_(1, -2 - sw / 3, 6, 3, "#171b26");   // legs, shoes
+  R_(-8, -24, 16, 15, c); R_(-11, -23 - sw / 3, 4, 11, c); R_(7, -23 + sw / 3, 4, 11, c); R_(-11, -13 - sw / 3, 4, 3, "#f1c9a5"); R_(7, -13 + sw / 3, 4, 3, "#f1c9a5");   // torso, arms, hands
+  R_(-7, -35, 14, 12, "#f1c9a5"); R_(-8, -38, 16, 6, HAIR[r.name]); R_(-8, -36, 3, 8, HAIR[r.name]);   // head, hair
+  R_(-4 + (r.face > 0 ? 1 : 0), -30, 2, 3, "#1b1b24"); R_(2 + (r.face > 0 ? 1 : 0), -30, 2, 3, "#1b1b24");
+  if (r.wait) { cv.fillStyle = "#fff"; cv.fillRect(x - 7, y - 46, 3, 3); cv.fillRect(x - 1, y - 46, 3, 3); cv.fillRect(x + 5, y - 46, 3, 3); }
+}
+function draw() {
+  cv.setTransform(.5, 0, 0, .5, 0, 0); cv.imageSmoothingEnabled = false; cv.fillStyle = "#0b0f19"; cv.fillRect(0, 0, LW, LH);
+  floor(); wall();
+  const items = [];
+  for (const [k, n] of Object.entries(PLACE)) if (k !== "giris") { const g = deskGeo(k, n); items.push({ d: g.x1 + g.y1 - 40, f: () => desk(k, n) }); }
+  items.push({ d: 60, f: () => cooler(470, 22) }, { d: 800, f: () => printer(740, 8) });
+  for (const [x, y] of [[40, 40], [30, 440], [790, 450], [400, 250], [610, 300]]) items.push({ d: x + y, f: () => plant(x, y) });
+  for (const r of Object.values(R)) items.push({ d: r.x + r.y, f: () => person(r) });
+  items.sort((a, b) => a.d - b.d).forEach(i => i.f());
+  for (const [a, el] of Object.entries(nt)) { const [x, y] = pr(R[a].x, R[a].y); el.style.left = x / 9 + "%"; el.style.top = (y - 42) / 6.4 + "%"; }
+  for (const [a, b] of Object.entries(bub)) { if (now > b.until) { b.el.remove(); delete bub[a]; continue; }
+    const [x, y] = pr(R[a].x, R[a].y); b.el.style.left = x / 9 + "%"; b.el.style.top = (y - 62) / 6.4 + "%"; }
+}
+$("pl").onclick = () => { if (running) { running = false; $("pl").textContent = "▶"; } else { if (evs.every(e => e.done)) build(D); running = true; $("pl").textContent = "⏸"; } };
+$("rs").onclick = () => { build(D); running = true; $("pl").textContent = "⏸"; };
+fetch(new URLSearchParams(location.search).get("data") || "telekom-ag.json").then(r => r.json()).then(d => { build(d); running = true; requestAnimationFrame(frame); });
+</script>
+</body>
+</html>

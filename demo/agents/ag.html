@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NexusOS · Agent ağı</title>
+<style>
+  :root { --bg:#070b14; --stage:#0a1222; --fg:#cfe3ff; --dim:#6b7fa3; --card:#0d1628; --line:#22355a; --link:#2b4a7a; --glow:.55; }
+  :root.light { --bg:#eef1fb; --stage:#f7f8ff; --fg:#26304d; --dim:#7a84a3; --card:#ffffff; --line:#d9def2; --link:#b9c1e6; --glow:.25; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 system-ui,sans-serif; }
+  header { display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:14px 20px 6px; }
+  h1 { margin:0; font-size:17px; letter-spacing:.07em; } header p { margin:0; color:var(--dim); flex:1 1 280px; }
+  button, select { background:var(--card); color:var(--fg); border:1px solid var(--line); border-radius:8px; padding:5px 12px; font:inherit; cursor:pointer; }
+  .wrap { display:grid; grid-template-columns:minmax(0,1fr) 320px; gap:14px; padding:8px 20px 24px; }
+  @media (max-width:900px) { .wrap { grid-template-columns:1fr; } }
+  #st { position:relative; aspect-ratio:780/560; background:var(--stage); border:1px solid var(--line); border-radius:16px; overflow:hidden;
+        background-image:radial-gradient(circle at 42% 50%, color-mix(in srgb,#ff7b9c 12%,transparent), transparent 55%); }
+  #lines { position:absolute; inset:0; width:100%; height:100%; }
+  #lines path { fill:none; stroke:var(--link); stroke-width:1.5; stroke-dasharray:3 6; opacity:.25; transition:opacity .6s; }
+  #lines path.on { opacity:.9; }
+  .n { position:absolute; transform:translate(-50%,-50%); text-align:center; transition:opacity .6s, filter .6s; }
+  .n.off { opacity:.18; filter:grayscale(1); }
+  .n svg { width:64px; height:64px; display:block; margin:auto; overflow:visible; }
+  .n.hub svg { width:92px; height:92px; }
+  .n .nm { font-size:12px; font-weight:600; color:var(--c); }
+  .n .halo { position:absolute; left:50%; top:32px; width:78px; height:78px; margin:-39px 0 0 -39px; border-radius:50%; border:2px solid var(--c); opacity:0; }
+  .n.hub .halo { top:46px; width:112px; height:112px; margin:-56px 0 0 -56px; }
+  .n.talk .halo { animation:ring 1.2s ease-out infinite; } @keyframes ring { from { opacity:.9; transform:scale(.8); } to { opacity:0; transform:scale(1.35); } }
+  .n.wait .halo { opacity:.55; border-style:dashed; }
+  .n.work .halo { opacity:.9; border-style:dashed; animation:spin 3s linear infinite; }
+  .n.done .halo { opacity:.9; border-style:solid; border-color:#6ee7a0; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+  #lines path.on { animation:march 1s linear infinite; } @keyframes march { to { stroke-dashoffset:-18; } }
+  .doc { position:absolute; transform:translate(-50%,-50%); background:var(--card); border:1px solid var(--c); border-radius:8px; padding:3px 8px; font-size:10px; max-width:128px; box-shadow:0 0 12px color-mix(in srgb,var(--c) 35%,transparent); animation:in .35s; pointer-events:none; }
+  .n.sel .nm { text-decoration:underline; }
+  .n.talk svg { filter:drop-shadow(0 0 10px var(--c)); }
+  .n { cursor:pointer; }
+  .tool { position:absolute; transform:translate(-50%,-50%); width:92px; padding:6px 4px; text-align:center; background:var(--card); border:1px solid var(--line); border-radius:12px; font-size:11px; color:var(--dim); transition:.4s; }
+  .tool.hit { border-color:var(--c); color:var(--fg); box-shadow:0 0 16px color-mix(in srgb,var(--c) calc(var(--glow)*100%),transparent); }
+  .tool b { display:block; font-size:16px; }
+  .cust { position:absolute; transform:translate(-50%,-50%); width:130px; background:var(--card); border:1px solid var(--line); border-radius:14px; padding:8px; text-align:center; font-size:12px; }
+  .cust b { display:block; font-size:22px; } .cust.talk { border-color:#f2c14e; box-shadow:0 0 18px #f2c14e66; }
+  .bub { position:absolute; transform:translate(-50%,-100%); max-width:190px; background:var(--card); border:1px solid var(--c); border-radius:12px; padding:5px 9px; font-size:12px; z-index:5; animation:in .35s; pointer-events:none; }
+  .bub.tl { color:var(--dim); border-style:dashed; } .bub.rp { font-size:11px; } @keyframes in { from { opacity:0; transform:translate(-50%,-90%); } }
+  .pk { position:absolute; width:10px; height:10px; margin:-5px; border-radius:50%; background:var(--c); box-shadow:0 0 12px var(--c); z-index:4; pointer-events:none; }
+  aside { display:flex; flex-direction:column; gap:12px; }
+  .box { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:10px 12px; }
+  .box h3 { margin:0 0 6px; font-size:12px; letter-spacing:.08em; color:var(--dim); font-weight:600; }
+  .row { display:flex; align-items:center; gap:8px; padding:2px 0; } .row i { width:9px; height:9px; border-radius:50%; background:var(--c); opacity:.25; } .row.w i { opacity:1; animation:blink 1s infinite; } .row.d i { opacity:1; } .row span:last-child { margin-left:auto; color:var(--dim); font-size:12px; }
+  @keyframes blink { 50% { opacity:.3; } }
+  #log { max-height:210px; overflow:auto; font-size:12px; } #log div { padding:2px 0 2px 8px; border-left:3px solid var(--c); margin:3px 0; }
+  #sonuc { font-size:18px; font-weight:700; } .ok { color:#6ee7a0; } .no { color:#ff7a7a; }
+</style>
+</head>
+<body>
+<header>
+  <h1>NEXUSOS · AGENT AĞI</h1>
+  <p id="baslik">…</p>
+  <a href="ofis2.html">ofis görünümü</a><button id="pl">⏸</button><button id="rs">⏮ baştan</button>
+  <select id="sp"><option value="1">1×</option><option value="2">2×</option><option value="4">4×</option></select>
+  <button id="th">☀ / ☾</button>
+</header>
+<div class="wrap">
+  <div id="st"><svg id="lines" viewBox="0 0 780 560" preserveAspectRatio="none"></svg></div>
+  <aside>
+    <div class="box"><h3>AGENT'LAR <span style="font-weight:400">· dokun: ne yapar?</span></h3><div id="ags"></div><div id="rol" style="color:var(--dim);margin-top:6px;font-size:12px"></div></div>
+    <div class="box"><h3>SONUÇ</h3><div id="sonuc">…</div></div>
+    <div class="box"><h3>KONUŞMA</h3><div id="log"></div></div>
+  </aside>
+</div>
+<script>
+// agents hand work to each other: a request goes agent -> agent (chains), several run in parallel, results come back one by one.
+// events are timed (t, seconds); a clock fires them, so overlapping work really overlaps.
+const COL = { "müşteri":"#f2c14e", "orkestratör":"#ff7b9c", analiz:"#4fd1ff", teklif:"#7ee787", kampanya:"#c792ea", risk:"#ffab70", "sözleşme":"#79c0ff" };
+const POS = { "müşteri":[11,50], "orkestratör":[42,50], analiz:[66,16], teklif:[80,36], kampanya:[80,64], risk:[66,84], "sözleşme":[42,86] };
+const TOOL = { crm:[90,12], katalog:[94,34], kampanya:[94,66], risk:[90,88], sozlesme:[20,86] };   // station -> tool card
+const TCOL = { crm:"analiz", katalog:"teklif", kampanya:"kampanya", risk:"risk", sozlesme:"sözleşme" };
+const ICON = { crm:"👥", katalog:"📋", kampanya:"🏷", risk:"🛡", sozlesme:"✍" };
+const $ = id => document.getElementById(id), st = $("st"), lines = $("lines");
+const robot = c => `<svg viewBox="0 0 64 64" style="--c:${c}"><line x1="32" y1="4" x2="32" y2="13" stroke="${c}" stroke-width="2.5"/><circle cx="32" cy="4" r="3.5" fill="${c}"/>
+  <rect x="10" y="13" width="44" height="32" rx="11" fill="#0d1a30" stroke="${c}" stroke-width="2.5"/>
+  <circle cx="23" cy="29" r="5" fill="${c}"/><circle cx="41" cy="29" r="5" fill="${c}"/><circle cx="24.5" cy="27.5" r="1.7" fill="#fff"/><circle cx="42.5" cy="27.5" r="1.7" fill="#fff"/>
+  <rect x="17" y="48" width="30" height="12" rx="6" fill="#0d1a30" stroke="${c}" stroke-width="2"/></svg>`;
+const pt = (k, tool) => tool ? TOOL[k] : POS[k];
+let D, evs, now, nxt, timer, nodes, tools, bub, links, waiting, docs;
+const sp = () => +$("sp").value;
+
+function build(d) {
+  D = d; evs = [...d.events].sort((a, b) => a.t - b.t); $("baslik").textContent = d.title;
+  st.querySelectorAll(".n,.tool,.cust,.bub,.pk,.doc").forEach(e => e.remove()); lines.innerHTML = "";
+  nodes = {}; tools = {}; bub = {}; links = {}; waiting = {}; docs = {}; now = 0; nxt = 0;
+  const c = document.createElement("div"); c.className = "cust"; c.style.cssText = `left:${POS["müşteri"][0]}%;top:${POS["müşteri"][1]}%`;
+  c.innerHTML = `<b>📱</b>müşteri hattı<br><span style="color:var(--dim)">${d.agents["müşteri"] || ""}</span>`; st.append(c); nodes["müşteri"] = c;
+  for (const a of Object.keys(POS).filter(k => k !== "müşteri")) {
+    const n = document.createElement("div"); n.className = "n" + (a === "orkestratör" ? " hub" : " off"); n.style.cssText = `left:${POS[a][0]}%;top:${POS[a][1]}%;--c:${COL[a]}`;
+    n.innerHTML = `<div class="halo"></div>${robot(COL[a])}<div class="nm">${a}</div>`; n.onclick = () => { $("rol").innerHTML = `<b style="color:${COL[a]}">${a}</b>: ${d.agents[a] || ""}`; };
+    st.append(n); nodes[a] = n;
+  }
+  for (const [s, [x, y]] of Object.entries(TOOL)) {
+    const t = document.createElement("div"); t.className = "tool"; t.style.cssText = `left:${x}%;top:${y}%;--c:${COL[TCOL[s]]}`;
+    t.innerHTML = `<b>${ICON[s]}</b>${d.stations[s]?.label || s}`; st.append(t); tools[s] = t;
+  }
+  $("ags").innerHTML = Object.keys(COL).filter(a => a !== "müşteri").map(a => `<div class="row" id="r-${a}" style="--c:${COL[a]}"><i></i><span>${a}</span><span>${a === "orkestratör" ? "hazır" : "bekliyor"}</span></div>`).join("");
+  $("log").innerHTML = ""; $("sonuc").textContent = "…"; $("sonuc").className = "";
+}
+function link(a, b, tool) {   // curve drawn the first time two nodes talk
+  const k = a + "|" + b; if (links[k]) return links[k];
+  const [x1, y1] = pt(a), [x2, y2] = pt(b, tool), p = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  p.setAttribute("d", `M${x1 * 7.8},${y1 * 5.6} Q${(x1 + x2) * 3.9},${(y1 + y2) * 2.8 - 30} ${x2 * 7.8},${y2 * 5.6}`); lines.append(p); return links[k] = p;
+}
+function setRow(a, cls, txt) { const r = $("r-" + a); if (!r) return; r.className = "row " + cls; r.lastElementChild.textContent = txt; const n = nodes[a]; if (!n) return;   // ring: dashed spin = working, dashed = waiting for an answer, green = done
+  n.classList.toggle("wait", cls === "w" && /yanıt/.test(txt)); n.classList.toggle("work", cls === "w" && !/yanıt/.test(txt)); n.classList.toggle("done", cls === "d");
+  if (cls === "d") { docs[a]?.remove(); delete docs[a]; } }
+function doc(a, icon, text) {   // the piece of work an agent is holding, floating beside it
+  docs[a]?.remove(); const [x, y] = POS[a], d = document.createElement("div"); d.className = "doc"; d.style.cssText = `left:${x + (x > 50 ? -9 : 9)}%;top:${y + 7}%;--c:${COL[a]}`;
+  d.textContent = icon + " " + text; st.append(d); docs[a] = d; }
+function packet(from, to, color, tool) {
+  const [x1, y1] = pt(from), [x2, y2] = pt(to, tool), p = document.createElement("div"); p.className = "pk"; p.style.cssText = `--c:${color};left:${x1}%;top:${y1}%`; st.append(p);
+  p.animate([{ left: x1 + "%", top: y1 + "%" }, { left: x2 + "%", top: y2 + "%" }], { duration: 1100 / sp(), easing: "ease-in-out" }).onfinish = () => p.remove();
+  const lk = link(from, to, tool); lk.classList.add("on"); clearTimeout(lk._t); lk._t = setTimeout(() => lk.classList.remove("on"), 4500 / sp());   // idle links dim again
+}
+function say(a, text, cls) {
+  bub[a]?.remove(); const [x, y] = POS[a], b = document.createElement("div"); b.className = "bub " + (cls || ""); b.style.cssText = `left:${x}%;top:${y - (a === "müşteri" ? 11 : 9)}%;--c:${COL[a]}`; b.textContent = text; st.append(b); bub[a] = b;
+  setTimeout(() => b.isConnected && b.remove(), 4200 / sp());
+}
+function talk(a) { const n = nodes[a]; n.classList.add("talk"); setTimeout(() => n.classList.remove("talk"), 1600 / sp()); }
+function logLine(from, to, text) { const l = document.createElement("div"); l.style.setProperty("--c", COL[from]); l.innerHTML = `<b style="color:${COL[from]}">${from}${to ? " → " + to : ""}</b> ${text}`; $("log").append(l); $("log").scrollTop = 1e5; }
+function fire(e) {
+  if (e.kind === "msg") {
+    const { from: f, to: t } = e;
+    packet(f, t, COL[f]); say(f, e.text, e.reply ? "rp" : ""); talk(f); logLine(f, t, e.text);
+    if (e.reply) {   // an answer: the asker stops waiting; "closes" lists agents whose delegated work this answer settles
+      delete waiting[t + ">" + f]; setRow(f, "d", "işini verdi");
+      for (const x of e.closes || []) { for (const k of Object.keys(waiting)) if (k.endsWith(">" + x) && k.startsWith(t + ">") || k.startsWith(x + ">")) delete waiting[k]; setRow(x, "d", "devretti, bitti"); }
+      const w = Object.keys(waiting).find(k => k.startsWith(t + ">")); setRow(t, "w", w ? "yanıt bekliyor: " + w.split(">")[1] : "çalışıyor");
+    } else if (f !== "müşteri" && t !== "müşteri") {
+      waiting[f + ">" + t] = 1; nodes[t].classList.remove("off"); setRow(t, "w", "çalışıyor"); setRow(f, "w", "yanıt bekliyor: " + t);
+    }
+  } else if (e.kind === "tool") {
+    const s = e.station; packet(e.agent, s, COL[e.agent], true); tools[s].classList.add("hit"); setTimeout(() => tools[s].classList.remove("hit"), 2200 / sp());
+    say(e.agent, "🔧 " + e.text, "tl"); doc(e.agent, ICON[s], e.text); logLine(e.agent, null, "🔧 " + e.text);
+  } else {
+    say(e.agent, e.text); talk(e.agent); logLine(e.agent, null, e.text);
+    const m = /^Sonuç:\s*(.+)/.exec(e.text); if (m) { $("sonuc").textContent = m[1]; $("sonuc").className = /satış/i.test(m[1]) ? "ok" : "no"; setRow("orkestratör", "d", "bitti"); }
+  }
+}
+function tick() {
+  now += 0.1 * sp();
+  while (nxt < evs.length && evs[nxt].t <= now) fire(evs[nxt++]);
+  if (nxt >= evs.length) { clearInterval(timer); $("pl").textContent = "▶"; }
+}
+function play() { clearInterval(timer); timer = setInterval(tick, 100); $("pl").textContent = "⏸"; }
+$("pl").onclick = () => $("pl").textContent === "⏸" ? (clearInterval(timer), $("pl").textContent = "▶") : (nxt >= evs.length && build(D), play());
+$("rs").onclick = () => { build(D); play(); };
+$("sp").onchange = () => $("pl").textContent === "⏸" && play();
+$("th").onclick = () => document.documentElement.classList.toggle("light");
+fetch(new URLSearchParams(location.search).get("data") || "telekom-ag.json").then(r => r.json()).then(d => { build(d); play(); });
+</script>
+</body>
+</html>

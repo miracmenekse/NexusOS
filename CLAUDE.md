@@ -33,7 +33,8 @@ verinin zaten durduğu yer için (NotebookLM, Drive).
 https://claude.ai/artifact/5ieGH9T4MNU3CN7d6ZqvRF — kaynak: `pano/index.html` (+ `demo/` sayfaları ve
 `img/` görselleri aynı yayına `files` ile gider; yeniden yayında aynı `files` haritasını ver).
 Koleksiyonlar: `isler` (doc id = WBS kodu; kod, ad, durum `yapilacak|yapiliyor|bekliyor|bitti`, sira,
-kimde, karar = bekleyen karar, neden = neden yapılmadı, teslim; bitenlerde sonuc), `demolar`
+kimde, grup = kategori (İşler sekmesi buna göre gruplar), karar = bekleyen karar, neden = neden yapılmadı,
+teslim; bitenlerde sonuc), `demolar`
 (cikti, ad, yer `panel|yerel`, ozet, karar, sayfalar[{ad,yol}], komut, adres, gorsel, sira),
 `adim/simdi` (baslik, aciklama, isler[], claude, aksiyonlar[{soru, neden, adimlar[], secenekler[{ad,
 aciklama, demo, oneri}], cevap, not}], sonra[]). Kullanıcı aksiyonları panelden cevaplar.

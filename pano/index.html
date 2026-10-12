@@ -37,7 +37,7 @@ nav button { font: 500 14px var(--f-govde); color: var(--soluk); background: non
 nav button[aria-selected="true"] { color: var(--yazi); border-color: var(--vurgu); }
 nav button .say { font: 500 11px var(--f-kod); background: var(--karar-zemin); color: var(--karar); border-radius: 9px; padding: 1px 6px; margin-left: 6px; }
 button:focus-visible, a:focus-visible, input:focus-visible { outline: 2px solid var(--vurgu); outline-offset: 2px; }
-section.sekme { display: grid; gap: 28px; padding-top: 22px; }
+section.sekme { display: grid; gap: 28px; padding-top: 22px; scroll-margin-top: 44px; }   /* hash link lands below the sticky tab bar */
 .kart { background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: 10px; padding: 18px; display: grid; gap: 12px; min-width: 0; }
 .soluk { color: var(--soluk); }
 .kod { font: 500 12px var(--f-kod); color: var(--soluk); font-variant-numeric: tabular-nums; }
@@ -80,6 +80,17 @@ ol.sonra { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
 .is .satir span:first-child { color: var(--soluk); font-size: 12.5px; padding-top: 1px; }
 .is .satir.karar span:last-child { color: var(--karar); font-weight: 500; }
 .yapildi { padding: 12px 18px; }
+.ozet { display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); }
+.gk { display: grid; gap: 6px; padding: 12px 14px; background: var(--yuzey); border: 1px solid var(--cizgi); border-radius: 10px; color: inherit; text-decoration: none; min-width: 0; }
+.gk:hover { border-color: var(--vurgu); }
+.gk .gad { font-weight: 600; font-size: 14px; }
+.gk .cubuk { width: 100%; }
+.gk .etiket { justify-self: start; }
+.gk.tamam { opacity: .62; }
+.grup { display: grid; gap: 10px; scroll-margin-top: 56px; }
+.gbas { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; border-bottom: 1px solid var(--cizgi); padding-bottom: 6px; }
+.bitenler summary { cursor: pointer; color: var(--soluk); font-size: 13.5px; padding: 4px 0; }
+.bitenler .liste { margin-top: 8px; }
 .yapildi .detay { color: var(--soluk); }
 code { font: 12.5px var(--f-kod); background: var(--bg); border: 1px solid var(--cizgi); border-radius: 4px; padding: 0 4px; overflow-wrap: anywhere; }
 
@@ -201,27 +212,40 @@ $("simdi").addEventListener("change", e => {
 
 /* ---- İşler ---- */
 function cizIsler() {
-  const t = S.isler.slice().sort(kodSira), yap = t.filter(i => i.durum !== "bitti"), bit = t.filter(i => i.durum === "bitti");
+  const t = S.isler.slice().sort(kodSira), acik = i => i.durum !== "bitti";
   const satir = (ad, v, cls = "") => v ? `<div class="satir ${cls}"><span>${ad}</span><span>${md(v)}</span></div>` : "";
-  $("isler").innerHTML = `
-    <div style="display:grid;gap:12px"><h3>Yapılacaklar (${yap.length})</h3>
-      <div class="liste">${yap.map(i => `<div class="kart is">
+  // groups come from the data (`grup`); the one holding the next open task comes first, finished groups last
+  const G = {}; for (const i of t) (G[i.grup || "Diğer"] ??= []).push(i);
+  const ilk = g => Math.min(...g.filter(acik).map(i => i.sira ?? 999), 1e4);
+  const gruplar = Object.entries(G).sort((a, b) => ilk(a[1]) - ilk(b[1]));
+  const gid = g => "g-" + g.replace(/[^\p{L}\p{N}]+/gu, "-").toLowerCase();
+  const kartAcik = i => `<div class="kart is">
         <span class="kod">${esc(i.kod)}</span>
         <div class="bas"><b>${esc(i.ad)}</b>
           <span class="etiket e-${esc(i.durum)}">${esc(DURUM[i.durum] || i.durum)}</span>
           ${i.karar ? `<span class="etiket e-karar">Karar bekliyor</span>` : ""}
           ${i.kimde ? `<span class="kod">sırada: ${esc(i.kimde)}</span>` : ""}</div>
-        <div class="detay">
-          ${satir("Karar", i.karar, "karar")}
-          ${satir("Neden yapılmadı", i.neden)}
-          ${satir("Çıktı", i.teslim)}
-        </div></div>`).join("") || `<div class="bos">Yapılacak iş kalmadı.</div>`}</div></div>
-    <div style="display:grid;gap:12px"><h3>Yapılanlar (${bit.length})</h3>
-      <div class="liste">${bit.map(i => `<div class="kart is yapildi">
-        <span class="kod">${esc(i.kod)}</span>
-        <div class="bas"><b>${esc(i.ad)}</b><span class="etiket e-bitti">Bitti</span></div>
-        ${i.sonuc ? `<div class="detay">${md(i.sonuc)}</div>` : ""}</div>`).join("") || `<div class="bos">Henüz biten iş yok.</div>`}</div></div>`;
+        <div class="detay">${satir("Karar", i.karar, "karar")}${satir("Neden yapılmadı", i.neden)}${satir("Çıktı", i.teslim)}</div></div>`;
+  const kartBitti = i => `<div class="kart is yapildi"><span class="kod">${esc(i.kod)}</span>
+        <div class="bas"><b>${esc(i.ad)}</b></div>${i.sonuc ? `<div class="detay"><div>${md(i.sonuc)}</div></div>` : ""}</div>`;
+  const kalan = t.filter(acik).length;
+  $("isler").innerHTML = `
+    <div style="display:grid;gap:12px"><h3>Kategoriler · ${kalan} iş kaldı</h3>
+      <div class="ozet">${gruplar.map(([g, l]) => { const k = l.filter(acik), b = l.length - k.length;
+        return `<a class="gk ${k.length ? "" : "tamam"}" href="#${gid(g)}">
+          <span class="gad">${esc(g)}</span>
+          <span class="cubuk"><i style="width:${b / l.length * 100}%"></i></span>
+          <span class="kod">${k.length ? `${k.length} kaldı` : "tamam"} · ${b}/${l.length}</span>
+          ${k.some(i => i.karar) ? `<span class="etiket e-karar">karar</span>` : k.some(i => i.durum === "bekliyor") ? `<span class="etiket e-bekliyor">dışarıda</span>` : ""}</a>`; }).join("")}</div></div>
+    ${gruplar.map(([g, l]) => { const k = l.filter(acik), b = l.filter(i => !acik(i));
+      return `<section class="grup" id="${gid(g)}">
+        <div class="gbas"><h2>${esc(g)}</h2><span class="kod">${k.length ? `${k.length} kaldı` : "hepsi bitti"} · ${b.length}/${l.length} bitti</span></div>
+        ${k.length ? `<div class="liste">${k.map(kartAcik).join("")}</div>` : ""}
+        ${b.length ? `<details class="bitenler"><summary>Yapılanlar (${b.length})</summary><div class="liste">${b.map(kartBitti).join("")}</div></details>` : ""}
+      </section>`; }).join("")}`;
 }
+$("isler").addEventListener("click", e => {   // category card: scroll to its group without touching the tab hash
+  const a = e.target.closest(".gk"); if (!a) return; e.preventDefault(); document.querySelector(a.getAttribute("href"))?.scrollIntoView({ behavior: "smooth", block: "start" }); });
 
 /* ---- Demolar ---- */
 function cizDemolar() {

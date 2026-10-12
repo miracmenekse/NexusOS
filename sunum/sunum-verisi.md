@@ -147,6 +147,13 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - **Sunumda:** 6. Demo; esin videosundaki "Go to Error" ile yan yana.
 - **İz:** WBS 6.6, d18
 
+### 2026-10-13 · Konsept: yazılımın canlı dijital ikizi
+- **Ne:** Konsept taslağı yazıldı: problem, dört kullanıcı tipi, üç çıktının karşılaştırması, 8 etkileşim ilkesi ("sorun kullanıcıya gelir", "iki dokunuşta satıra", "görülen her şeyin kaynağı vardır", "ses fiil, dokunma nesne"), özgünlük ve 5+5 kişilik doğrulama planı (SUS, NASA-TLX).
+- **Neden önemli:** Demoların arkasındaki fikir tek sayfada; sunumun 2-5. bölümlerinin metni buradan çıkar.
+- **Kanıt:** `konsept/4.2-konsept.md`
+- **Sunumda:** 2. Problem, 3. Yön, 5. Çıktılarımız; ilkeler tek slayt.
+- **İz:** WBS 4.2
+
 ## 3. Referans projeler
 
 | Proje | ★ / lisans / son (2026-10-11) | Ne aldık | Çıktı |

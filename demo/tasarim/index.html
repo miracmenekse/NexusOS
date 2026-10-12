@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NexusOS · Görünüm önerileri</title>
+<title>NexusOS · Ç1 Neon kod şehri</title>
 <style>
   body { margin: 0; font: 14px system-ui, sans-serif; background: #e9edf3; color: #1d2433; }
   h1 { font-size: 20px; margin: 20px 24px 4px; } .lead { margin: 0 24px 16px; color: #5b6578; }
@@ -12,18 +12,16 @@
   .card h2 { font-size: 15px; margin: 0; padding: 12px 16px 2px; } .card p { margin: 0; padding: 0 16px 12px; color: #5b6578; }
   svg { display: block; width: 100%; height: auto; }
   .a .stage { background: radial-gradient(circle at 50% 40%, #12223f, #05080f 70%); }
-  .b .stage { background: #f7f9fc; }
-  .c .stage { background: linear-gradient(#cfe4f7, #eef5fb); }
   .pulse { animation: p 1.4s ease-in-out infinite; } @keyframes p { 50% { opacity: .35 } }
   .flow { stroke-dasharray: 4 10; animation: f 1.2s linear infinite; } @keyframes f { to { stroke-dashoffset: -28 } }
   #a { cursor: pointer; }
   #a [data-s], #a [data-c] { transition: opacity .6s; }
   #a[data-f] [data-s]:not(.fl), #a[data-f] [data-c] { opacity: .08; }
   .fl { opacity: 0; font: 600 6.5px system-ui; fill: #cfe3ff; text-anchor: middle; pointer-events: none; }
-  #a[data-f=gateway] [data-s=gateway], #a[data-f=orders] [data-s=orders], #a[data-f=inventory] [data-s=inventory], #a[data-f=payments] [data-s=payments] { opacity: 1; }
-  #a[data-f=gateway] .fl[data-s=gateway], #a[data-f=orders] .fl[data-s=orders], #a[data-f=inventory] .fl[data-s=inventory], #a[data-f=payments] .fl[data-s=payments] { opacity: 1; }
+  #a[data-f] [data-s].on { opacity: 1; }
+  #a[data-f] .fl[data-s].on { opacity: 1; }
   #a[data-f] [data-c].hot { opacity: .9; }
-  #a[data-f=orders] .src.warn { fill: #ffb84d; }
+  #a[data-f] .src.warn { fill: #ffb84d; }
   .a .stage { position: relative; }
   #uy { position: absolute; top: 10px; right: 10px; display: flex; flex-direction: column; gap: 6px; width: 250px; z-index: 5; }
   .toast { background: #2a0d14ee; border: 1px solid #ff4d5e; border-radius: 10px; padding: 7px 10px; color: #ffd0d5; font-size: 12px; cursor: pointer; box-shadow: 0 0 16px #ff4d5e66; animation: tin .3s; }
@@ -42,24 +40,20 @@
 </style>
 </head>
 <body>
-<h1>Kod şehri: üç görünüm önerisi</h1>
-<p class="lead">Aynı veri: 4 servis, 11 dosya; <b>stock.py</b> ve <b>card.py</b> hatalı. Hangisi (ya da hangi karışım) ile devam edelim?</p>
+<h1>Ç1 · Neon kod şehri</h1>
+<p class="lead">Binalar <code>services/</code> kodundan okunuyor (yükseklik = satır sayısı, yaylar = koddaki çağrılar); renkler canlı trafikten.</p>
 <div class="grid">
   <div class="card a"><div class="stage"><svg id="a" viewBox="0 0 640 420"></svg><div id="chip">● hata yok</div><div id="uy"></div><div id="hata"></div></div>
-    <h2>A · Neon / Luma</h2><p>Karanlık sahne, parlayan cam binalar, akan ışık çizgileri. Sunum ve "vay" etkisi için; esin videosuna en yakın. <b>Bir servise dokun: gruba yakınlaşır, hata kaynağı içeride görünür.</b> <span id="durum">canlı akış bağlanıyor…</span></p><div class="cap" id="acap"></div></div>
-  <div class="card b"><div class="stage"><svg id="b" viewBox="0 0 640 420"></svg></div>
-    <h2>B · Sade pano</h2><p>Açık tema, yumuşak renkler, büyük okunur etiketler, durum rozetleri. Günlük kullanım ve yeni başlayan için en anlaşılır.</p></div>
-  <div class="card c"><div class="stage"><svg id="c" viewBox="0 0 640 420"></svg></div>
-    <h2>C · Dijital ikiz maket</h2><p>İzometrik mimari maket: servis = bina bloğu, hata = uyarı işareti ve duman. Dijital ikiz diline en yakın.</p></div>
+    <p><b>Bir servise dokun: gruba yakınlaşır, hata kaynağı içeride görünür.</b> <span id="durum">canlı akış bağlanıyor…</span></p><div class="cap" id="acap"></div></div>
 </div>
 <script>
-const S = [ // service, grid x,y, files [name, height, error]
-  ["gateway", 0, 0, [["app.py", 2], ["routing.py", 3]]],
-  ["orders", 1, 0, [["app.py", 2], ["order_handler.py", 5], ["order.py", 3], ["inventory_client.py", 2], ["payment_client.py", 2]]],
-  ["inventory", 0, 1, [["app.py", 2], ["stock.py", 4, 14]]],
-  ["payments", 1, 1, [["app.py", 2], ["card.py", 3, 3]]],
-];
-const CALLS = [["gateway", "orders"], ["orders", "inventory", 1], ["orders", "payments", 1]];
+// structure comes from the code: GET /yapi (traffic/yapi.py reads services/ with ast)
+// ponytail: senkron istek; sayfa yalnız :4400/sehir'den açılır, yapı küçük
+const Y = (() => { try { const r = new XMLHttpRequest(); r.open("GET", "/yapi", false); r.send(); return JSON.parse(r.responseText); }
+  catch { return { services: [], calls: [] }; } })();
+const S = Y.services.map((s, i) => [s.name, i % 2, Math.floor(i / 2),   // service, grid x,y, files [name, height, calls]
+  s.files.map(f => [f.file.split("/").pop(), 1 + f.lines / 5, f.calls || null])]);
+const CALLS = Y.calls;
 const NS = "http://www.w3.org/2000/svg";
 const REG = {}, CP = {};   // live view: file key "svc/file.py" -> svg parts; "a>b" -> call arc
 let cur = null, curCall = null;   // service / call being drawn: lets the zoom dim everything else
@@ -93,54 +87,30 @@ function draw(id, th) {
     el(svg, "text", { x: lx + 4, y: ly + 18, "text-anchor": "start", "font-size": th.label, fill: th.text, "font-weight": 600 }, name);
   }
   cur = null;
-  for (const [a, b, err] of CALLS) {
+  for (const [a, b] of CALLS) {
     curCall = a + ">" + b;   // calls drawn before buildings of the far plates
     const [x1, y1] = center(L, a, o), [x2, y2] = center(L, b, o);
     const d = `M${x1},${y1} Q${(x1 + x2) / 2},${Math.min(y1, y2) - 70} ${x2},${y2}`;
-    const bp = el(svg, "path", { d, fill: "none", stroke: err && !th.live ? th.callErr : th.call, "stroke-width": th.callW, opacity: .8 });
-    if (th.flow) el(svg, "path", { d, fill: "none", stroke: err && !th.live ? "#ffd0d5" : "#e6fbff", "stroke-width": 2.5, class: "flow" });
-    if (th.live) CP[a + ">" + b] = { bp, th };
+    const bp = el(svg, "path", { d, fill: "none", stroke: th.call, "stroke-width": th.callW, opacity: .8 });
+    el(svg, "path", { d, fill: "none", stroke: "#e6fbff", "stroke-width": 2.5, class: "flow" });
+    CP[a + ">" + b] = { bp, th };
   }
   curCall = null;
   const order = S.flatMap(([n]) => L[n].files.map(b => ({ ...b, n }))).sort((p, q) => (p.x + p.y) - (q.x + q.y));
-  for (const { f: [file, h, err], x, y, n } of order) {
+  for (const { f: [file, h, src], x, y, n } of order) {   // src: services this file calls; it turns amber when such a call fails
     cur = n;
-    const src = /_client\.py$/.test(file);   // the files that send the failing calls
-    const bad = th.live ? 0 : err;
-    const top = box(svg, x, y, 1.2, 1.2, 4 + h * 9, o, bad ? th.bad : th.good, src ? "src" : null);
+    const top = box(svg, x, y, 1.2, 1.2, 4 + h * 9, o, th.good, src ? "src" : null);
     el(svg, "text", { x: iso(x + 0.6, y + 0.6, 0, o)[0], y: iso(x + 0.6, y + 0.6, 4 + h * 9, o)[1] - 6, class: "fl" }, file);
-    if (th.live) {
-      const [tx, ty] = iso(x + 0.6, y + 0.6, 4 + h * 9, o);
-      REG[n + "/" + file] = { top, th, src,
-        c: el(svg, "circle", { cx: tx, cy: ty - 14, r: 16, fill: "#ff4d5e33", visibility: "hidden" }),
-        t: el(svg, "text", { x: tx, y: ty - 34, "text-anchor": "middle", "font-size": 12, fill: "#ffb3bb", visibility: "hidden" }) };
-    }
-    if (bad) {
-      top.setAttribute("class", "pulse");
-      const [tx, ty] = iso(x + 0.6, y + 0.6, 4 + h * 9, o);
-      th.mark(svg, tx, ty, file, err);
-    }
+    const [tx, ty] = iso(x + 0.6, y + 0.6, 4 + h * 9, o);
+    REG[n + "/" + file] = { top, th, src,
+      c: el(svg, "circle", { cx: tx, cy: ty - 14, r: 16, fill: "#ff4d5e33", visibility: "hidden" }),
+      t: el(svg, "text", { x: tx, y: ty - 34, "text-anchor": "middle", "font-size": 12, fill: "#ffb3bb", visibility: "hidden" }) };
   }
   cur = null;
-  if (th.legend) th.legend(svg);
 }
 const o = { x: 320, y: 80, k: 19 };
-draw("a", { o, live: true, label: 13, text: "#9fc4ff", callW: 3, flow: true, call: "#2fd0ff55", callErr: "#ff3b4e88",
-  plate: ["#11284a", "#0a1a33", "#0d2140"], good: ["#4fd1ffcc", "#1b6f99cc", "#2a8fc4cc"], bad: ["#ff4d5e", "#a11a2a", "#d02a3c"],
-  mark(svg, x, y, f, n) { el(svg, "circle", { cx: x, cy: y - 14, r: 16, fill: "#ff4d5e33", class: "pulse" });
-    el(svg, "text", { x, y: y - 34, "text-anchor": "middle", "font-size": 12, fill: "#ffb3bb" }, `${f} · ${n} hata`); } });
-draw("b", { o, label: 15, text: "#1d2433", callW: 3, flow: false, call: "#9aa7bd", callErr: "#e5484d",
-  plate: ["#ffffff", "#dfe5ee", "#eaeef5"], good: ["#b7d4f5", "#6e9fd6", "#8db6e4"], bad: ["#ffb4b6", "#e5484d", "#f07a7d"],
-  mark(svg, x, y, f, n) { const w = 116; el(svg, "rect", { x: x - w / 2, y: y - 46, width: w, height: 26, rx: 13, fill: "#e5484d" });
-    el(svg, "text", { x, y: y - 28, "text-anchor": "middle", "font-size": 12, fill: "#fff", "font-weight": 600 }, `⚠ ${f}  ${n}`); },
-  legend(svg) { el(svg, "rect", { x: 16, y: 352, width: 260, height: 34, rx: 8, fill: "#fff", stroke: "#dfe5ee" });
-    el(svg, "circle", { cx: 34, cy: 369, r: 6, fill: "#8db6e4" }); el(svg, "text", { x: 46, y: 373, "font-size": 12 }, "sağlıklı");
-    el(svg, "circle", { cx: 120, cy: 369, r: 6, fill: "#e5484d" }); el(svg, "text", { x: 132, y: 373, "font-size": 12 }, "hata (dokun → koda git)"); } });
-draw("c", { o, label: 13, text: "#34495e", callW: 4, flow: true, call: "#7f8c8d88", callErr: "#c0392b99",
-  plate: ["#d5dbe0", "#a9b4bd", "#bcc5cc"], good: ["#f4f1ea", "#c9c1b2", "#ded7ca"], bad: ["#f4c7b8", "#b4523b", "#cf6c52"],
-  mark(svg, x, y, f, n) { for (let i = 0; i < 3; i++) el(svg, "circle", { cx: x + i * 6 - 6, cy: y - 10 - i * 9, r: 6 + i * 2, fill: "#7f8c8d55", class: "pulse" });
-    el(svg, "polygon", { points: `${x + 18},${y - 44} ${x + 30},${y - 22} ${x + 6},${y - 22}`, fill: "#f1c40f", stroke: "#7d6608" });
-    el(svg, "text", { x: x + 18, y: y - 26, "text-anchor": "middle", "font-size": 13, "font-weight": 700 }, "!"); } });
+draw("a", { o, label: 13, text: "#9fc4ff", callW: 3, call: "#2fd0ff55", callErr: "#ff3b4e88",
+  plate: ["#11284a", "#0a1a33", "#0d2140"], good: ["#4fd1ffcc", "#1b6f99cc", "#2a8fc4cc"], bad: ["#ff4d5e", "#a11a2a", "#d02a3c"] });
 
 // A: tap a service -> zoom into the group; the failing file and its sender show inside
 const A = document.getElementById("a"), cap = document.getElementById("acap"), L0 = layout(o);
@@ -156,7 +126,7 @@ function go(t) {
 function focus(name) {
   if (!name) { A.removeAttribute("data-f"); cap.style.display = "none"; return go({ x: 0, y: 0, w: 640, h: 420 }); }
   const [cx, cy] = center(L0, name, o);
-  A.setAttribute("data-f", name);
+  A.setAttribute("data-f", name); A.querySelectorAll("[data-s]").forEach(e => e.classList.toggle("on", e.dataset.s === name));
   A.querySelectorAll("[data-c]").forEach(e => e.classList.toggle("hot", e.dataset.c.split(">").includes(name)));
   cap.innerHTML = why(name); cap.style.display = "block";
   go({ x: cx - 125, y: cy - 92, w: 250, h: 164 });
@@ -175,15 +145,11 @@ const key = (svc, f) => f ? svc + "/" + f.split("/").pop() : null;
 const base = k => k.split("/")[1];
 function why(n) {
   const mine = Object.entries(FILE).filter(([k, v]) => k.startsWith(n + "/") && v.fails).sort((a, b) => b[1].last - a[1].last);
-  if (n === "orders") {
-    const out = [["inventory_client.py", "inventory"], ["payment_client.py", "payments"]]
-      .map(([f, to]) => [f, to, EDGE["orders>" + to]]).filter(([, , e]) => e?.fails);
-    return out.length ? "Bu grupta hata yok, alt servislerin hataları buradan çıkıyor: " +
-      out.map(([f, to, e]) => `<b>${f}</b> → ${to} (${e.fails} hata${ago(e) < HOT ? ", şu an" : ""})`).join("; ") : "Şu an hata yok.";
-  }
-  if (!mine.length) return `<b>${n}</b>: şu an hata yok.`;
+  const out = (S.find(s => s[0] === n)?.[3] || []).filter(f => f[2]).flatMap(([f, , to]) => to.map(t => [f, t, EDGE[n + ">" + t]])).filter(([, , e]) => e?.fails);
+  if (!mine.length) return out.length ? "Bu grupta hata yok, alt servislerin hataları buradan çıkıyor: " +
+      out.map(([f, to, e]) => `<b>${f}</b> → ${to} (${e.fails} hata${ago(e) < HOT ? ", şu an" : ""})`).join("; ") : `<b>${n}</b>: şu an hata yok.`;
   const [k, v] = mine[0], e = v.err;
-  return `<button onclick="detay('${k}')">koda git</button> Hata kaynağı: <b>${e.fromFile || e.from}</b> → <b>${e.toFile}</b> (${e.path}). ${v.fails} hata${ago(v) < HOT ? ", şu an sürüyor" : ", son 4 sn temiz"} · ${JSON.stringify(e.detail)}`;
+  return `<button onclick="detay('${k}')">koda git</button> Hata kaynağı: <b>${e.fromFile || e.from}</b> → <b>${e.at || e.toFile}</b> (${e.path}). ${v.fails} hata${ago(v) < HOT ? ", şu an sürüyor" : ", son 4 sn temiz"} · ${e.detail?.reason || JSON.stringify(e.detail)}`;
 }
 function fly(k, ok) {   // one dot per call along its arc
   const c = CP[k]; if (!c || document.hidden || fly.n > 60) return;
@@ -198,7 +164,7 @@ const es = new EventSource("/events"), durum = document.getElementById("durum");
 es.onopen = () => durum.textContent = "● canlı";
 es.onerror = () => durum.textContent = "canlı akış yok (bu sayfayı http://localhost:4400/sehir adresinden aç)";
 es.onmessage = m => {
-  const e = JSON.parse(m.data), tk = key(e.to, e.toFile), ek = e.from + ">" + e.to;
+  const e = JSON.parse(m.data), tk = key(e.to, e.at?.split(":")[0] || e.toFile), ek = e.from + ">" + e.to;
   const f = tk && (FILE[tk] ??= { calls: 0, fails: 0, last: -1e9 }), ed = EDGE[ek] ??= { calls: 0, fails: 0, last: -1e9 };
   if (f) f.calls++; ed.calls++;
   if (!e.ok) { if (f) { f.fails++; f.last = performance.now(); f.err = e; } ed.fails++; ed.last = performance.now(); }
@@ -211,7 +177,7 @@ setInterval(() => {   // repaint: red while failing, calm again after 4 s withou
     r.top.classList.toggle("pulse", !!bad);
     r.c.setAttribute("visibility", bad ? "visible" : "hidden"); r.t.setAttribute("visibility", v?.fails ? "visible" : "hidden");
     if (v?.fails) r.t.textContent = `${base(k)} · ${v.fails} hata`;
-    if (r.src) r.top.classList.toggle("warn", ago(EDGE["orders>" + (k.includes("inventory") ? "inventory" : "payments")]) < HOT);
+    if (r.src) r.top.classList.toggle("warn", r.src.some(t => ago(EDGE[svcOf(k) + ">" + t]) < HOT));
     if (r.src) for (const p of r.top._f) p.classList.toggle("warn", r.top.classList.contains("warn"));
   }
   for (const [k, c] of Object.entries(CP)) c.bp.setAttribute("stroke", ago(EDGE[k]) < HOT ? c.th.callErr : c.th.call);
@@ -225,17 +191,18 @@ const svcOf = k => k.split("/")[0];
 async function kod(file) { return SRC[file] ??= await fetch("/kod?f=" + encodeURIComponent(file)).then(r => r.ok ? r.text() : "").catch(() => ""); }
 function toast(k, v) {
   const e = v.err, t = document.createElement("div"); t.className = "toast";
-  t.innerHTML = `<b>⚠ ${base(k)}</b> · ${e.path}<small>${e.fromFile || e.from} → ${svcOf(k)}</small>`;
+  t.innerHTML = `<b>⚠ ${base(k)}</b> · ${e.detail?.reason || e.path}<small>${e.fromFile || e.from} → ${e.at || svcOf(k)}</small>`;
   t.onclick = () => { t.remove(); focus(svcOf(k)); detay(k); };
   uy.prepend(t); while (uy.children.length > 3) uy.lastChild.remove(); setTimeout(() => t.remove(), 9000);
 }
 async function detay(k) {
   const v = FILE[k], e = v?.err; if (!e) return;
-  const file = e.toFile, src = await kod(file), lines = src.split("\n"), hit = lines.map((l, i) => /False|raise|error/i.test(l) ? i : -1).filter(i => i >= 0);
+  const [file, at] = e.at ? e.at.split(":") : [e.toFile], src = await kod(file), lines = src.split("\n");   // at = the line that returned the failure
+  const hit = at ? [at - 1] : lines.map((l, i) => /False|raise|error/i.test(l) ? i : -1).filter(i => i >= 0);
   const code = lines.map((l, i) => `<div class="${hit.includes(i) ? "hl" : ""}"><span class="ln">${i + 1}</span>${l.replace(/[<&>]/g, c => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;" }[c]))}</div>`).join("");
-  const rec = (HIST[k] || []).slice(-4).reverse().map(h => `<li>${h.t} · ${h.ms.toFixed(0)} ms · ${JSON.stringify(h.detail)}</li>`).join("");
+  const rec = (HIST[k] || []).slice(-4).reverse().map(h => `<li>${h.t} · ${h.ms.toFixed(0)} ms · ${h.detail?.reason || ""} ${Object.entries(h.detail || {}).filter(([k]) => !["ok", "reason", "at"].includes(k)).map(([k, v]) => k + "=" + v).join(" ")}</li>`).join("");
   hata.innerHTML = `<span class="x" onclick="this.parentNode.style.display='none'">✕</span><h3>⚠ ${base(k)}: ${e.path} başarısız</h3>
-    <div class="flow"><span>${e.fromFile || e.from}</span> → <span>${file}</span></div>
+    <div class="flow"><span>${e.fromFile || e.from}</span> → <span>${e.at || file}</span></div>${e.detail?.reason ? `<div><b>${e.detail.reason}</b></div>` : ""}
     <div>${v.fails} hata / ${v.calls} çağrı · ${ago(v) < HOT ? "<b style='color:#ff9aa5'>şu an sürüyor</b>" : "son 4 sn temiz"}</div>
     <ul>${rec}</ul>${src ? `<pre>${code}</pre>` : "<div style='color:#7b86a0'>kaynak alınamadı</div>"}`;
   hata.style.display = "block"; hata.dataset.k = k;
@@ -248,7 +215,7 @@ function sweep() {   // new failure = file was calm and is red now: raise an ale
   if (hata.dataset.k && hata.style.display === "block") detay(hata.dataset.k);   // keep the numbers live
 }
 setInterval(sweep, 400);
-const _om = es.onmessage; es.onmessage = m => { _om(m); const e = JSON.parse(m.data), k = key(e.to, e.toFile); if (!e.ok && k) (HIST[k] ??= []).push({ t: new Date().toLocaleTimeString("tr"), ms: e.ms, detail: e.detail }); };
+const _om = es.onmessage; es.onmessage = m => { _om(m); const e = JSON.parse(m.data), k = key(e.to, e.at?.split(":")[0] || e.toFile); if (!e.ok && k) (HIST[k] ??= []).push({ t: new Date().toLocaleTimeString("tr"), ms: e.ms, detail: e.detail }); };
 </script>
 </body>
 </html>

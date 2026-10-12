@@ -5,17 +5,16 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 EVENTS = os.path.join(HERE, "..", "services", "events.jsonl")
-PORTS = {8101: "gateway", 8102: "orders", 8103: "inventory", 8104: "payments"}
-# the file that serves each service's routes (one entry point per demo service)
-PORT_FILE = {8101: "gateway/routing.py", 8102: "orders/handlers/order_handler.py",
-             8103: "inventory/store/stock.py", 8104: "payments/provider/card.py"}
+from yapi import yapi
+YAPI = yapi()   # services, files, port -> service / handler file, read from the code at start
+PORTS, PORT_FILE = YAPI["port_svc"], YAPI["port_file"]
 
 
 def to_edge(ev):
     port = int(ev["url"].split(":")[2].split("/")[0])
     src = ev["caller"].split("/")[0]
     return {"from": src, "to": PORTS.get(port, "?"), "ok": ev["ok"], "ms": ev["ns"] / 1e6,
-            "fromFile": ev["caller"], "toFile": PORT_FILE.get(port),
+            "fromFile": ev["caller"], "toFile": PORT_FILE.get(port), "at": (ev.get("detail") or {}).get("at"),
             "path": "/" + ev["url"].split("/", 3)[3], "detail": ev.get("detail")}
 
 
@@ -27,6 +26,9 @@ class H(BaseHTTPRequestHandler):
             ok = f.startswith(root + os.sep) and f.endswith(".py") and os.path.isfile(f)
             self.send_response(200 if ok else 404); self.send_header("Content-Type", "text/plain; charset=utf-8"); self.end_headers()
             self.wfile.write(open(f, "rb").read() if ok else b""); return
+        if self.path == "/yapi":
+            self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
+            self.wfile.write(json.dumps(YAPI).encode()); return
         if self.path != "/events":
             page = os.path.join(HERE, "..", "tasarim", "index.html") if self.path.startswith("/sehir") else os.path.join(HERE, "index.html")
             body = open(page, "rb").read()

@@ -101,14 +101,14 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 ### 2026-10-11 · Ç1 görsel dil seçildi: Neon / Luma + gruba yakınlaşma
 - **Ne:** Üç kod şehri önerisinden A (karanlık sahne, parlayan cam binalar, akan ışık çizgileri) seçildi. Bir servise dokununca kamera önce gruba yakınlaşıyor, dosyalar etiketleniyor, hatanın hangi dosyada başladığı ve hangi dosyadan geldiği grubun içinde görünüyor.
 - **Neden önemli:** "Sistem nerede bozuk?" sorusu iki adımda cevaplanıyor: hangi servis, sonra hangi dosya. Esin videosuna (Luma) en yakın görsel dil.
-- **Kanıt:** `demo/tasarim/index.html` (A kartı, `python3 -m http.server 4600 --directory demo/tasarim`), önceki öneri görseli `gorseller/2026-10-11-gorunum-onerileri.png`. İlk sürümde veri sabitti; artık canlı trafiğe bağlı (`bash demo/traffic/run.sh` → http://localhost:4400/sehir). Dosya listesi ve hata satırı hâlâ sabit (WBS 6.6).
+- **Kanıt:** `demo/tasarim/index.html` (A kartı, `python3 -m http.server 4600 --directory demo/tasarim`), önceki öneri görseli `gorseller/2026-10-11-gorunum-onerileri.png`. İlk sürümde veri sabitti; artık canlı trafiğe ve (2026-10-13) koda bağlı (`bash demo/run.sh` → http://localhost:4400/sehir).
 - **Sunumda:** 5. Çıktılarımız (Ç1) + 6. Demo; yakınlaşma gösterimi.
 - **İz:** WBS 6.3, d17
 
 ### 2026-10-11 · Neon şehirde hata görüntüleme
 - **Ne:** Bir dosya hata vermeye başlayınca sağ üstte uyarı kartı çıkıyor (dosya, uç nokta, çağıran dosya → servis); hatalı dosya ve onu çağıran dosya grubun içinde işaretleniyor.
 - **Neden önemli:** Sorun, kullanıcı aramadan önüne geliyor; Luma'daki "kırmızı modül" akışının canlı hâli.
-- **Kanıt:** `demo/tasarim/index.html`, `bash demo/traffic/run.sh` → http://localhost:4400/sehir
+- **Kanıt:** `demo/tasarim/index.html`, `bash demo/run.sh` → http://localhost:4400/sehir
 - **Sunumda:** 6. Demo.
 - **İz:** WBS 6.9, d17
 
@@ -139,6 +139,13 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - **Kanıt:** `demo/run.sh`, `demo/arsiv/`
 - **Sunumda:** 6. Demo; "nasıl çalıştırılır" notu.
 - **İz:** WBS 1.4
+
+### 2026-10-13 · Neon şehir gerçek koddan: hatanın satırına kadar
+- **Ne:** Şehrin binaları, yükseklikleri ve çağrı yayları artık `services/` kodundan okunuyor (Python ast); elle yazılmış liste kalmadı. Bir servis hata döndürünce ya da çökünce cevabın içinde hatayı üreten dosya:satır geliyor; "koda git" tam o satırı işaretliyor (ör. `stock.py:16`, "stok yetersiz").
+- **Neden önemli:** Demo artık bir çizim değil, kodun dijital ikizi: kod değişince şehir değişir; "sorun nerede?" sorusu satır düzeyinde cevaplanıyor.
+- **Kanıt:** `demo/traffic/yapi.py`, `demo/services/common/web.py` (`fail`), `gorseller/2026-10-13-c1-neon-koddan.png`, `gorseller/2026-10-13-c1-neon-gercek-satir.png`
+- **Sunumda:** 6. Demo; esin videosundaki "Go to Error" ile yan yana.
+- **İz:** WBS 6.6, d18
 
 ## 3. Referans projeler
 
@@ -172,6 +179,8 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 | `sunum/gorseller/2026-10-11-explorviz-kieker.png` | ExplorViz altlığı, Kieker örneği |
 | `sunum/gorseller/2026-10-12-c3-altlik-ag-oturum.png` | Ç3 altlığı: ağ görünümü, Claude Code oturumu (ana + 2 alt agent) |
 | `sunum/gorseller/2026-10-12-c3-altlik-ofis-telekom.png` | Ç3 altlığı: sprite ofis, telekom senaryosu |
+| `sunum/gorseller/2026-10-13-c1-neon-koddan.png` | Ç1 Neon şehir: koddan okunan yapı, iki dosya canlı hatada |
+| `sunum/gorseller/2026-10-13-c1-neon-gercek-satir.png` | Ç1 "koda git": hatayı döndüren satır (stock.py:16) işaretli |
 | `graphify-out/graph.html` | Bilgi grafiği (ekran görüntüsü alınacak) |
 
 ## 6. Dikkat

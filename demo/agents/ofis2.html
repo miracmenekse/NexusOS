@@ -24,11 +24,12 @@
   .chat { position:relative; border-left:1px solid var(--line); background:#0e121b; }
   .chat > div { position:absolute; inset:0; display:flex; flex-direction:column; }
   .ch { padding:10px 12px; border-bottom:1px solid var(--line); font-weight:700; display:flex; gap:8px; align-items:center; } .ch small { color:var(--dim); font-weight:400; margin-left:auto; }
-  #log { flex:1; overflow:auto; padding:8px 10px; }
+  #log { flex:1; overflow:auto; overflow-x:hidden; padding:8px 10px; } .m > div { min-width:0; overflow-wrap:anywhere; }
   .m { display:flex; gap:9px; margin:9px 0; } .av { width:34px; height:34px; border-radius:8px; background:var(--c); display:grid; place-items:center; font-size:19px; flex:none; }
   .m b { color:var(--c); } .m time { color:var(--dim); font-size:11px; margin-left:6px; } .m .x { color:#d5dcec; } .m.tool .x { color:var(--dim); font-style:italic; }
   .pill { text-align:center; margin:12px 0; } .pill span { background:#171d2b; border:1px solid var(--line); color:var(--dim); border-radius:999px; padding:2px 12px; font-size:12px; }
   .in { margin:8px 10px 10px; padding:9px 12px; border:1px solid var(--line); border-radius:8px; color:#566079; background:#0b0f18; }
+  .tl { display:flex; align-items:center; gap:10px; padding:6px 12px; background:#131722; border-bottom:1px solid var(--line); } .tl input { flex:1; accent-color:#ff7b9c; } .tl span { font:12px ui-monospace,monospace; color:var(--dim); min-width:84px; text-align:right; }
   #sonuc { font-weight:700; } .ok { color:#6ee7a0; } .no { color:#ff7a7a; }
 </style>
 </head>
@@ -36,8 +37,9 @@
 <div class="win">
   <div class="bar"><i style="background:#ff5f57"></i><i style="background:#febc2e"></i><i style="background:#28c840"></i>
     <span class="t">NEXUSOS — AGENT OFİSİ</span><span id="baslik" style="color:var(--dim);font-size:12px"></span>
-    <a href="ag.html">ağ görünümü</a>
+    <a href="ag.html" id="diger">ağ görünümü</a>
     <button id="pl">⏸</button><button id="rs">⏮</button><select id="sp"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select></div>
+  <div class="tl"><input type="range" id="tl" min="0" max="1" step="0.1" value="0" aria-label="zaman çizelgesi"><span id="tlt">0:00</span></div>
   <div class="body">
     <div id="st"><canvas id="cv" width="1200" height="896"></canvas></div>
     <div class="chat"><div><div class="ch"># <span id="kanal">ekip</span> <small>sonuç: <span id="sonuc">…</span></small></div><div id="log"></div><div class="in">Mesaj gönder</div></div></div>
@@ -86,14 +88,15 @@ function route(a, b) {   // fewest waypoints from a to b (BFS)
   while (q.length) { const n = q.shift(); if (n === b) break; for (const m of WP[n][2]) if (!(m in prev)) { prev[m] = n; q.push(m); } }
   const out = []; for (let n = b; n; n = prev[n]) out.unshift(n); return out;
 }
-let D, evs, now, R, bub, nt, waiting, running, last, active, nmsg;
+let D, evs, now, R, bub, nt, waiting, running, last, active, nmsg, inbox, ff = false, mute = false, T = 1;   // ff: seeking (no bubbles); mute: dry run (no output)
 const sp = () => +$("sp").value;
 const homeOf = r => INSAN.has(r.name) && r.visited ? WAITAT[r.name] : HOME[r.name];   // a person comes in, then waits beside the hub
 const destFor = who => INSAN.has(who) ? WAITAT[who] : HOME[who];
 
 function build(d) {
-  D = d; layout(d); $("kanal").textContent = d.kanal || "ekip"; $("baslik").textContent = d.title || ""; evs = d.events.map((e, i) => ({ ...e, i, done: false, queued: false })).sort((a, b) => a.t - b.t);
+  D = d; layout(d); inbox = {}; $("kanal").textContent = d.kanal || "ekip"; $("baslik").textContent = d.title || ""; evs = d.events.map((e, i) => ({ ...e, i, done: false, queued: false })).sort((a, b) => a.t - b.t);
   st.querySelectorAll(".bub,.nt").forEach(e => e.remove());
+  for (const e of evs) if (e.kind === "msg") (inbox[e.to] ??= { list: [], k: 0 }).list.push(e);
   R = {}; bub = {}; waiting = {}; now = 0; active = {}; nmsg = 0; nt = {}; $("log").innerHTML = ""; $("sonuc").textContent = "…"; $("sonuc").className = "";
   for (const a of Object.keys(COL)) { const n = HOME[a];
     R[a] = { name: a, node: n, x: WP[n][0], y: WP[n][1], path: [], q: [], cur: null, face: SPOT[n]?.[0] || "front-left", z: SPOT[n]?.[1], wait: false, st: 0 };
@@ -102,20 +105,23 @@ function build(d) {
 }
 const setRow = (a, cls, txt) => { const r = R[a]; if (!r) return; r.st = cls === "d" ? 2 : cls === "w" ? 1 : 0; r.wait = cls === "w" && /yanıt/.test(txt); };
 function say(a, text, cls, ms) {
+  if (ff || mute) return;
   bub[a]?.el.remove(); const el = document.createElement("div"); el.className = "bub " + (cls || ""); el.style.setProperty("--c", COL[a]); el.textContent = text; st.append(el);
   bub[a] = { el, until: now + ms };
 }
-function pill(t) { const d = document.createElement("div"); d.className = "pill"; d.innerHTML = `<span>${t}</span>`; $("log").append(d); $("log").scrollTop = 1e5; }
+function pill(t) { if (mute) return; const d = document.createElement("div"); d.className = "pill"; d.innerHTML = `<span>${t}</span>`; $("log").append(d); $("log").scrollTop = 1e5; }
 function logLine(from, to, text) {   // Slack-style channel message
-  const tool = text.startsWith("🔧"), m = Math.floor(nmsg++ / 2), clock = `20:${String(18 + m).padStart(2, "0")}`;
+  if (mute) return;
+  const tool = text.startsWith("🔧"), clock = mmss(now);   // timeline time, same as the bar
   const l = document.createElement("div"); l.className = "m" + (tool ? " tool" : ""); l.style.setProperty("--c", COL[from]);
   l.innerHTML = `<div class="av">${FACE[from]}</div><div><b>${from}</b><time>${clock}</time><div class="x">${to ? `<span style="color:${COL[to]}">@${to}</span> ` : ""}${text}</div></div>`;
   $("log").append(l); $("log").scrollTop = 1e5; if (/^Sonuç:/.test(text)) pill("✅ " + text);
 }
 function ready(e) {   // the actor must have received everything addressed to it earlier in the script
   if (e.t > now) return false;
-  const who = e.kind === "msg" ? e.from : e.agent;
-  return evs.every(p => !(p.kind === "msg" && p.to === who && p.i < e.i) || p.done);
+  const b = inbox[e.kind === "msg" ? e.from : e.agent]; if (!b) return true;
+  while (b.k < b.list.length && b.list[b.k].done) b.k++;   // first incoming message not yet delivered
+  return b.k >= b.list.length || b.list[b.k].i > e.i;
 }
 function deliver(e) {
   const { from: f, to: t } = e; say(f, e.text, "", 3); if (INSAN.has(f)) R[f].visited = true; logLine(f, t, e.text);
@@ -150,15 +156,28 @@ function step(r, dt) {
   r.timer += dt; const dur = e.kind === "tool" ? 3.2 : 1.8;
   if (r.timer >= dur) { if (e.kind === "tool") delete active[r.name]; e.done = true; r.cur = null; }
 }
+function sim(dt) {   // advance the office by dt seconds; true when the script is over and everyone is idle
+  now += dt;
+  for (const e of evs) if (!e.queued && ready(e)) { e.queued = true; R[e.kind === "msg" ? e.from : e.agent].q.push(e); }
+  for (const r of Object.values(R)) step(r, dt);
+  return evs.every(e => e.done) && Object.values(R).every(r => !r.cur && !r.q.length);
+}
+const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
+function bar() { $("tl").value = now; $("tlt").textContent = `${mmss(now)} / ${mmss(T)}`; }
+function seek(t) {   // walking makes the office's clock differ from event times, so replay the simulation itself up to t
+  build(D); ff = true; while (now < t && !sim(0.1)); ff = false; bar();
+}
 function frame(ts) {
   const dt = Math.min(0.1, (ts - (last || ts)) / 1000) * sp(); last = ts; if (running) {
-    now += dt;
-    for (const e of evs) if (!e.queued && ready(e)) { e.queued = true; R[e.kind === "msg" ? e.from : e.agent].q.push(e); }
-    for (const r of Object.values(R)) step(r, dt);
-    if (evs.every(e => e.done) && Object.values(R).every(r => !r.cur && !r.q.length)) { running = false; $("pl").textContent = "▶"; }
+    if (sim(dt)) { running = false; $("pl").textContent = "▶"; }
+    bar();
   }
   draw(); requestAnimationFrame(frame);
 }
+$("tl").oninput = () => { seek(+$("tl").value); };
+$("diger").onclick = e => {   // ağ runs on event time: hand over the time of the last event that happened here
+  const t = Math.max(0, ...evs.filter(x => x.done || x.queued).map(x => x.t));
+  e.currentTarget.href = "ag.html" + location.search + "#t" + t.toFixed(1); };
 // anchor: feet / bottom-centre at (x%, y%), same as the original (translate(-50%, -100%))
 function sprite(n, x, y, w800) { const [w, h] = sizeOf(n, w800); cv.drawImage(IMG[n], x * W / 100 - w / 2, y * H / 100 - h, w, h); }
 function draw() {
@@ -178,7 +197,11 @@ function draw() {
 }
 $("pl").onclick = () => { if (running) { running = false; $("pl").textContent = "▶"; } else { if (evs.every(e => e.done)) build(D); running = true; $("pl").textContent = "⏸"; } };
 $("rs").onclick = () => { build(D); running = true; $("pl").textContent = "⏸"; };
-loaded.then(() => fetch(new URLSearchParams(location.search).get("data") || "telekom-ag.json")).then(r => r.json()).then(d => { build(d); running = true; requestAnimationFrame(frame); });
+loaded.then(() => fetch(new URLSearchParams(location.search).get("data") || "telekom-ag.json")).then(r => r.json()).then(d => {
+  D = d; mute = true; build(d); while (!sim(0.1) && now < 36000); T = now; mute = false;   // dry run: length of the office's own timeline
+  $("tl").max = T; const t0 = /^#t([\d.]+)$/.exec(location.hash)?.[1];
+  if (t0) { build(d); ff = true; while (!sim(0.1) && !evs.some(e => e.t >= +t0 && (e.queued || e.done))); ff = false; bar(); } else build(d);   // from ağ: first moment that event time is reached
+  running = true; requestAnimationFrame(frame); });
 </script>
 </body>
 </html>

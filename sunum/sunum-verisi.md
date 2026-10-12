@@ -126,6 +126,20 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - **Sunumda:** 7. Sonraki adımlar.
 - **İz:** d18, d19, d20
 
+### 2026-10-12 · Ç3 altlığı: aynı olay modeli, farklı kaynaklar, farklı görünümler
+- **Ne:** Agent'ların ne yaptığı tek bir olay biçiminde tutuluyor (mesaj, araç, konuşma, sonuç). Sprite ofis ve ağ görünümü kim nerede, hangi renk, hangi araç bilgisini veriden çıkarıyor; telekom senaryosu (6 agent) ve bu projenin Claude Code oturumu (ana + 2 alt agent, 530 olay) aynı iki görünümde oynuyor.
+- **Neden önemli:** Ç3 artık tek bir demo değil, altlık: yeni bir agent sistemi bağlamak için yalnız bir dönüştürücü yazmak yetiyor, görünümler değişmiyor.
+- **Kanıt:** `demo/agents/altlik.py`, `gorseller/2026-10-12-c3-altlik-ag-oturum.png`, `gorseller/2026-10-12-c3-altlik-ofis-telekom.png`
+- **Sunumda:** 5. Çıktılarımız (Ç3); iki kaynak × iki görünüm, 2×2 slayt.
+- **İz:** WBS 6.10, d19, d22
+
+### 2026-10-12 · Proje toplandı: git + tek komut
+- **Ne:** Proje git'e alındı; tüm demolar `bash demo/run.sh` ile tek komutla açılıyor (2 port). ExplorViz ve seçilmeyen görünümler arşivde.
+- **Neden önemli:** Demo gösterimi tek adım; ekip üyesi kurulumsuz çalıştırabilir.
+- **Kanıt:** `demo/run.sh`, `demo/arsiv/`
+- **Sunumda:** 6. Demo; "nasıl çalıştırılır" notu.
+- **İz:** WBS 1.4
+
 ## 3. Referans projeler
 
 | Proje | ★ / lisans / son (2026-10-11) | Ne aldık | Çıktı |
@@ -156,6 +170,8 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 | `kaynaklar/drive/video/NexusOS Luma - kareler 20-32s.jpg` | Kod şehri uçuşu, onarım, "Zero Cognitive Load" |
 | `sunum/gorseller/2026-10-11-c1-ilk-sehir.png` | Kendi 4 servisimizin ilk kod şehri |
 | `sunum/gorseller/2026-10-11-explorviz-kieker.png` | ExplorViz altlığı, Kieker örneği |
+| `sunum/gorseller/2026-10-12-c3-altlik-ag-oturum.png` | Ç3 altlığı: ağ görünümü, Claude Code oturumu (ana + 2 alt agent) |
+| `sunum/gorseller/2026-10-12-c3-altlik-ofis-telekom.png` | Ç3 altlığı: sprite ofis, telekom senaryosu |
 | `graphify-out/graph.html` | Bilgi grafiği (ekran görüntüsü alınacak) |
 
 ## 6. Dikkat
@@ -163,6 +179,7 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - **deskrpg** "Sustainable Use License": yalnız iç iş kullanımı / ticari olmayan kullanım; ticari ürüne altlık olamaz, esin ve iç demo olabilir.
 - **ExplorViz frontend** lisansı package.json'da MIT, kökte LICENSE yok; ürünleşmeden önce teyit (risk r8).
 - Şirket Ar-Ge projesi (Rovo) bilgisi sunuma `[gizli]` ayıklanmadan girmez.
+- Ç3 oturum görünümü (`oturum.json`) araç çağrılarında Drive klasör kimliği gibi iç bilgi gösteriyor; sunumdan önce ayıkla.
 - Ç3 demosu oturum kaydındaki kullanıcı mesajlarını ve komut özetlerini gösterir; sunumdan önce oynatılacak oturumu gözden geçir (iç bilgi, kişi adı).
 - **Sprite görselleri** (`demo/agents/px/`): pixel-agents deposu MIT ama görsellerin kökeni (YZ üretimi?) belirsiz; ticari kullanımdan önce netleştirilmeli (r10).
 - Luma/Kling videoları YZ üretimi; "ürün görüntüsü" diye sunulmaz, "esin/konsept" diye sunulur.

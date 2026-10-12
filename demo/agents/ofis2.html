@@ -40,7 +40,7 @@
     <button id="pl">⏸</button><button id="rs">⏮</button><select id="sp"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select></div>
   <div class="body">
     <div id="st"><canvas id="cv" width="1200" height="896"></canvas></div>
-    <div class="chat"><div><div class="ch"># satis-ofisi <small>sonuç: <span id="sonuc">…</span></small></div><div id="log"></div><div class="in">Mesaj #satis-ofisi</div></div></div>
+    <div class="chat"><div><div class="ch"># <span id="kanal">ekip</span> <small>sonuç: <span id="sonuc">…</span></small></div><div id="log"></div><div class="in">Mesaj gönder</div></div></div>
   </div>
 </div>
 <script>
@@ -56,19 +56,28 @@ const WP = {   // id: [x%, y%, neighbours] (aisle graph of the main office, symm
   n18:[29.9,47.1,["n16","n20"]], n19:[18.3,57.7,["s4"]], n20:[38.8,54.2,["n18"]], n22:[76.3,70.5,["s8","n24"]], n23:[66.8,75.6,["printer"]], n24:[81.3,62.5,["n22"]],
 };
 for (const [a, [, , ns]] of Object.entries(WP)) for (const b of ns) if (!WP[b][2].includes(a)) WP[b][2].push(a);
-const HOME = { "müşteri":"door", "orkestratör":"s5", analiz:"s4", teklif:"s9", kampanya:"s10", risk:"s2", "sözleşme":"s7" };
 const SPOT = { s5:["rear-right",70], s4:["rear-left",58], s9:["front-left",55], s10:["front-right",55], s2:["rear-right",85], s7:["rear-left",95], door:["front-left",50], water1:["front-right",48] };   // facing + z at the desk
-const SKIN = { "müşteri":"explore-1", "orkestratör":"Claude-1", analiz:"dev-1", teklif:"employee-1", kampanya:"employee-2", risk:"security-audit-1", "sözleşme":"Frontend-dev-1" };
-const COL = { "müşteri":"#f2c14e", "orkestratör":"#ff7b9c", analiz:"#4fd1ff", teklif:"#4cc96a", kampanya:"#c792ea", risk:"#ff9f43", "sözleşme":"#4f8cff" };
-const FACE = { "müşteri":"🙂", "orkestratör":"😎", analiz:"🤓", teklif:"🧐", kampanya:"🤩", risk:"😬", "sözleşme":"✍️" };
-const STATION = { analiz:"CRM", teklif:"tarife kataloğu", kampanya:"kampanya motoru", risk:"kredi / risk", "sözleşme":"sözleşme" };
+// Who sits where, looks like what and has which colour comes from the data (altlik.py model), in agent order.
+const SEATS = ["s4", "s9", "s10", "s2", "s7", "s3", "s1", "s8", "s6"];   // ponytail: 9 masa; fazlası aynı masaları paylaşır
+const SKINS = ["dev-1", "employee-1", "employee-2", "security-audit-1", "Frontend-dev-1", "dev-2", "employee-3"];
+const PAL = ["#4fd1ff", "#4cc96a", "#c792ea", "#ff9f43", "#4f8cff", "#56d4bc", "#e3b341"];
+const FACES_E = ["🤓", "🧐", "🤩", "😬", "✍️", "🛠", "🔎"];
+let HOME, SKIN, COL, FACE, HUB, INSAN, WAITAT;
+function layout(d) {
+  HOME = {}; SKIN = {}; COL = {}; FACE = {}; INSAN = new Set(); WAITAT = {}; let i = 0;
+  for (const [a, x] of Object.entries(d.agents)) {
+    if (x.tur === "insan") { HOME[a] = "door"; WAITAT[a] = ["water1", "water2"][INSAN.size % 2]; INSAN.add(a); SKIN[a] = "explore-1"; COL[a] = x.renk || "#f2c14e"; FACE[a] = "🙂"; }
+    else if (x.tur === "ana") { HUB = a; HOME[a] = "s5"; SKIN[a] = "Claude-1"; COL[a] = x.renk || "#ff7b9c"; FACE[a] = "😎"; }
+    else { HOME[a] = SEATS[i % SEATS.length]; SKIN[a] = SKINS[i % SKINS.length]; COL[a] = x.renk || PAL[i % PAL.length]; FACE[a] = FACES_E[i % FACES_E.length]; i++; }
+  }
+}
 const FURN = [   // [sprite, x%, y%, natural width in 800px room space]
   ["desk-left-rear",42.4,50.4,84],["desk-left-front",46.7,53,84],["desk-right-front",39.9,55.2,84],["desk-left-rear",31.4,64.8,84],["desk-left-front",35.4,67.5,84],["desk-right-front",27.9,70,84],
   ["desk-left-rear",59,73.7,84],["desk-left-front",62.6,76,84],["desk-right-front",55.4,78.7,84],["desk-right-rear",66.6,71.1,84],
   ["coffee",78.5,50.2,40],["filing",45,56.5,40],["printer",85.4,56.8,55],["monstera",91.9,64.7,50],["snake",43.2,37.9,40],["money",32,71.2,42],["money",89.2,65.7,42],["monstera",60.2,80.4,50],
 ];
 const IMG = {}, FACES = ["front-left", "front-right", "rear-left", "rear-right"];
-const names = ["room.jpg", ...FURN.map(f => f[0] + ".png"), ...Object.values(SKIN).flatMap(s => FACES.map(f => `${s}-${f}.png`))];
+const names = ["room.jpg", ...FURN.map(f => f[0] + ".png"), ..."explore-1 Claude-1".split(" ").concat(SKINS).flatMap(s => FACES.map(f => `${s}-${f}.png`))];
 const loaded = Promise.all([...new Set(names)].map(n => new Promise(r => { const i = new Image(); i.onload = r; i.onerror = r; i.src = "px/" + n; IMG[n] = i; })));
 const sizeOf = (n, w800) => { const i = IMG[n]; return [w800 * SC, w800 * SC * i.naturalHeight / i.naturalWidth]; };
 
@@ -79,17 +88,17 @@ function route(a, b) {   // fewest waypoints from a to b (BFS)
 }
 let D, evs, now, R, bub, nt, waiting, running, last, active, nmsg;
 const sp = () => +$("sp").value;
-const homeOf = r => r.name === "müşteri" && r.visited ? "water1" : HOME[r.name];   // the customer comes in, then waits beside the orchestrator
-const destFor = who => who === "müşteri" ? "water1" : HOME[who];
+const homeOf = r => INSAN.has(r.name) && r.visited ? WAITAT[r.name] : HOME[r.name];   // a person comes in, then waits beside the hub
+const destFor = who => INSAN.has(who) ? WAITAT[who] : HOME[who];
 
 function build(d) {
-  D = d; evs = d.events.map((e, i) => ({ ...e, i, done: false, queued: false })).sort((a, b) => a.t - b.t);
+  D = d; layout(d); $("kanal").textContent = d.kanal || "ekip"; $("baslik").textContent = d.title || ""; evs = d.events.map((e, i) => ({ ...e, i, done: false, queued: false })).sort((a, b) => a.t - b.t);
   st.querySelectorAll(".bub,.nt").forEach(e => e.remove());
   R = {}; bub = {}; waiting = {}; now = 0; active = {}; nmsg = 0; nt = {}; $("log").innerHTML = ""; $("sonuc").textContent = "…"; $("sonuc").className = "";
   for (const a of Object.keys(COL)) { const n = HOME[a];
     R[a] = { name: a, node: n, x: WP[n][0], y: WP[n][1], path: [], q: [], cur: null, face: SPOT[n]?.[0] || "front-left", z: SPOT[n]?.[1], wait: false, st: 0 };
     const el = document.createElement("div"); el.className = "nt"; el.style.setProperty("--c", COL[a]); el.textContent = a; st.append(el); nt[a] = el; }
-  pill("📣 Satış ekibi çevrim içi");
+  pill("📣 Ekip çevrim içi");
 }
 const setRow = (a, cls, txt) => { const r = R[a]; if (!r) return; r.st = cls === "d" ? 2 : cls === "w" ? 1 : 0; r.wait = cls === "w" && /yanıt/.test(txt); };
 function say(a, text, cls, ms) {
@@ -109,12 +118,12 @@ function ready(e) {   // the actor must have received everything addressed to it
   return evs.every(p => !(p.kind === "msg" && p.to === who && p.i < e.i) || p.done);
 }
 function deliver(e) {
-  const { from: f, to: t } = e; say(f, e.text, "", 3); if (f === "müşteri") R[f].visited = true; logLine(f, t, e.text);
+  const { from: f, to: t } = e; say(f, e.text, "", 3); if (INSAN.has(f)) R[f].visited = true; logLine(f, t, e.text);
   if (e.reply) {
     delete waiting[t + ">" + f]; setRow(f, "d", "işini verdi");
     for (const x of e.closes || []) { for (const k of Object.keys(waiting)) if (k.startsWith(x + ">") || (k.startsWith(t + ">") && k.endsWith(">" + x))) delete waiting[k]; setRow(x, "d", "devretti, bitti"); }
     const w = Object.keys(waiting).find(k => k.startsWith(t + ">")); setRow(t, "w", w ? "yanıt bekliyor: " + w.split(">")[1] : "çalışıyor");
-  } else if (f !== "müşteri" && t !== "müşteri") { waiting[f + ">" + t] = 1; setRow(t, "w", "çalışıyor"); setRow(f, "w", "yanıt bekliyor: " + t); }
+  } else if (!INSAN.has(f) && !INSAN.has(t)) { waiting[f + ">" + t] = 1; setRow(t, "w", "çalışıyor"); setRow(f, "w", "yanıt bekliyor: " + t); }
 }
 function startTask(r, e) { r.cur = e; r.phase = "go"; r.path = route(r.node, e.kind === "msg" ? destFor(e.to) : homeOf(r)); r.timer = 0; }
 function faceTo(r, dx, dy) { r.face = (dy < 0 ? "rear-" : "front-") + (dx < 0 ? "left" : "right"); r.z = null; }
@@ -131,7 +140,8 @@ function step(r, dt) {
     if (!tgt) { r.phase = "act"; r.timer = 0; const s = SPOT[r.node]; if (s) { r.face = s[0]; r.z = s[1]; }
       if (e.kind === "walk") { r.cur = null; return; }
       if (e.kind === "msg") deliver(e); else if (e.kind === "tool") { say(r.name, "🔧 " + e.text, "tl", 3.2); logLine(r.name, null, "🔧 " + e.text); active[r.name] = 1; }
-      else { say(r.name, e.text, "", 2.6); logLine(r.name, null, e.text); const m = /^Sonuç:\s*(.+)/.exec(e.text); if (m) { $("sonuc").textContent = m[1]; $("sonuc").className = /satış/i.test(m[1]) ? "ok" : "no"; setRow("orkestratör", "d", "bitti"); } }
+      else { const x = e.kind === "sonuc" ? "Sonuç: " + e.text : e.text; say(r.name, x, "", 2.6); logLine(r.name, null, x);
+        if (e.kind === "sonuc") { $("sonuc").textContent = e.text; $("sonuc").className = e.ok ? "ok" : "no"; setRow(HUB, "d", "bitti"); } }
       return; }
     const [tx, ty] = WP[tgt], dx = tx - r.x, dy = ty - r.y, d = Math.hypot(dx, dy), s = 11 * dt;
     if (d < s) { r.x = tx; r.y = ty; r.node = tgt; } else { r.x += dx / d * s; r.y += dy / d * s; faceTo(r, dx, dy); }

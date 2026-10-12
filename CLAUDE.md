@@ -20,6 +20,8 @@ Ana video: Luma (`kaynaklar/drive/video/demo sahneler.md`).
 **Çıktılar (d15):** Ç1 kod mekânı, Ç2 servis trafiği, Ç3 yaşayan agent'lar — ayrı demolar (WBS 6.3-6.5).
 **Yön (2026-10-12, d18-d20):** Ç1 = Neon şehir (`demo/tasarim/index.html`, ExplorViz yalnız referans). Ç3 = agent
 görselleştirme altlığı (ortak olay modeli); sprite ofis ve ağ onun örnek görünümleri. Ses/dokunma ertelendi.
+**Demolar:** `bash demo/run.sh` hepsini açar (4400: Ç1 `/sehir`, Ç2 `/`; 4500: statik). Ç3 olay modeli ve doğrulayıcı
+`demo/agents/altlik.py` (docstring = biçim); görünümler `?data=<model>.json` okur. Eskiler `demo/arsiv/`. Proje git'te.
 **Sunum verisi:** önemli iş bitince `nexusos-sunum` skill'iyle `sunum/sunum-verisi.md`'ye kayıt ekle.
 
 **Analiz bölüşümü (d11):** Dokümanları burada özetleme/kopyalama. Önemli dosyaları kullanıcı doğrudan verir,

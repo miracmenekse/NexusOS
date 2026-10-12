@@ -10,3 +10,5 @@ kaynaklar/graphify-out/
 *.zip
 # oturum kaydı içerir (kullanıcı mesajları)
 demo/agents/timeline.json
+demo/arsiv/zaman-cizelgesi/timeline.json
+demo/agents/oturum.json

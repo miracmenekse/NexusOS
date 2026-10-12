@@ -72,11 +72,26 @@
 <script>
 // agents hand work to each other: a request goes agent -> agent (chains), several run in parallel, results come back one by one.
 // events are timed (t, seconds); a clock fires them, so overlapping work really overlaps.
-const COL = { "müşteri":"#f2c14e", "orkestratör":"#ff7b9c", analiz:"#4fd1ff", teklif:"#7ee787", kampanya:"#c792ea", risk:"#ffab70", "sözleşme":"#79c0ff" };
-const POS = { "müşteri":[11,50], "orkestratör":[42,50], analiz:[66,16], teklif:[80,36], kampanya:[80,64], risk:[66,84], "sözleşme":[42,86] };
-const TOOL = { crm:[90,12], katalog:[94,34], kampanya:[94,66], risk:[90,88], sozlesme:[20,86] };   // station -> tool card
-const TCOL = { crm:"analiz", katalog:"teklif", kampanya:"kampanya", risk:"risk", sozlesme:"sözleşme" };
-const ICON = { crm:"👥", katalog:"📋", kampanya:"🏷", risk:"🛡", sozlesme:"✍" };
+// Everything below is derived from the data (altlik.py model): who is where, colours, which tool card belongs to whom.
+const PAL = ["#4fd1ff", "#7ee787", "#c792ea", "#ffab70", "#79c0ff", "#56d4bc", "#e3b341"];
+const SLOT = [[66,16],[80,36],[80,64],[66,84],[42,86],[42,14],[20,86],[20,14],[92,50]];   // ponytail: 9 yer; daha çok agent'ta halka yerleşimi gerekir
+const HUBTOOL = [[24,18],[24,82],[58,32],[58,68],[8,18],[8,82]];                          // cards for tools the hub itself uses
+let COL, POS, TOOL, TCOL, ICON, HUB, INSAN;
+function layout(d) {
+  COL = {}; POS = {}; TOOL = {}; TCOL = {}; ICON = {}; INSAN = new Set(); let i = 0, j = 0, h = 0;
+  for (const [a, x] of Object.entries(d.agents)) {
+    COL[a] = x.renk || (x.tur === "insan" ? "#f2c14e" : x.tur === "ana" ? "#ff7b9c" : PAL[j++ % PAL.length]);
+    if (x.tur === "insan") { POS[a] = [11, 50 + 24 * INSAN.size]; INSAN.add(a); }
+    else if (x.tur === "ana") { HUB = a; POS[a] = [42, 50]; }
+    else POS[a] = SLOT[i++ % SLOT.length];
+  }
+  const n = {};
+  for (const e of d.events) if (e.kind === "tool" && !TOOL[e.station]) {   // a card sits outward from the first agent that uses it
+    const a = e.agent, [x, y] = POS[a], k = n[a] = (n[a] || 0) + 1;
+    TOOL[e.station] = a === HUB ? HUBTOOL[h++ % HUBTOOL.length] : [Math.min(94, Math.max(6, x + (x >= 42 ? 15 : -15))), Math.min(92, Math.max(8, y + (k - 1) * 13 - 2))];
+    TCOL[e.station] = a; ICON[e.station] = d.stations[e.station]?.icon || "🔧";
+  }
+}
 const $ = id => document.getElementById(id), st = $("st"), lines = $("lines");
 const robot = c => `<svg viewBox="0 0 64 64" style="--c:${c}"><line x1="32" y1="4" x2="32" y2="13" stroke="${c}" stroke-width="2.5"/><circle cx="32" cy="4" r="3.5" fill="${c}"/>
   <rect x="10" y="13" width="44" height="32" rx="11" fill="#0d1a30" stroke="${c}" stroke-width="2.5"/>
@@ -89,19 +104,21 @@ const sp = () => +$("sp").value;
 function build(d) {
   D = d; evs = [...d.events].sort((a, b) => a.t - b.t); $("baslik").textContent = d.title;
   st.querySelectorAll(".n,.tool,.cust,.bub,.pk,.doc").forEach(e => e.remove()); lines.innerHTML = "";
-  nodes = {}; tools = {}; bub = {}; links = {}; waiting = {}; docs = {}; now = 0; nxt = 0;
-  const c = document.createElement("div"); c.className = "cust"; c.style.cssText = `left:${POS["müşteri"][0]}%;top:${POS["müşteri"][1]}%`;
-  c.innerHTML = `<b>📱</b>müşteri hattı<br><span style="color:var(--dim)">${d.agents["müşteri"] || ""}</span>`; st.append(c); nodes["müşteri"] = c;
-  for (const a of Object.keys(POS).filter(k => k !== "müşteri")) {
-    const n = document.createElement("div"); n.className = "n" + (a === "orkestratör" ? " hub" : " off"); n.style.cssText = `left:${POS[a][0]}%;top:${POS[a][1]}%;--c:${COL[a]}`;
-    n.innerHTML = `<div class="halo"></div>${robot(COL[a])}<div class="nm">${a}</div>`; n.onclick = () => { $("rol").innerHTML = `<b style="color:${COL[a]}">${a}</b>: ${d.agents[a] || ""}`; };
+  nodes = {}; tools = {}; bub = {}; links = {}; waiting = {}; docs = {}; now = 0; nxt = 0; layout(d);
+  for (const a of INSAN) {
+    const c = document.createElement("div"); c.className = "cust"; c.style.cssText = `left:${POS[a][0]}%;top:${POS[a][1]}%`;
+    c.innerHTML = `<b>👤</b>${a}<br><span style="color:var(--dim)">${d.agents[a].rol || ""}</span>`; st.append(c); nodes[a] = c;
+  }
+  for (const a of Object.keys(POS).filter(k => !INSAN.has(k))) {
+    const n = document.createElement("div"); n.className = "n" + (a === HUB ? " hub" : " off"); n.style.cssText = `left:${POS[a][0]}%;top:${POS[a][1]}%;--c:${COL[a]}`;
+    n.innerHTML = `<div class="halo"></div>${robot(COL[a])}<div class="nm">${a}</div>`; n.onclick = () => { $("rol").innerHTML = `<b style="color:${COL[a]}">${a}</b>: ${d.agents[a].rol || ""}`; };
     st.append(n); nodes[a] = n;
   }
   for (const [s, [x, y]] of Object.entries(TOOL)) {
     const t = document.createElement("div"); t.className = "tool"; t.style.cssText = `left:${x}%;top:${y}%;--c:${COL[TCOL[s]]}`;
     t.innerHTML = `<b>${ICON[s]}</b>${d.stations[s]?.label || s}`; st.append(t); tools[s] = t;
   }
-  $("ags").innerHTML = Object.keys(COL).filter(a => a !== "müşteri").map(a => `<div class="row" id="r-${a}" style="--c:${COL[a]}"><i></i><span>${a}</span><span>${a === "orkestratör" ? "hazır" : "bekliyor"}</span></div>`).join("");
+  $("ags").innerHTML = Object.keys(COL).filter(a => !INSAN.has(a)).map(a => `<div class="row" id="r-${a}" style="--c:${COL[a]}"><i></i><span>${a}</span><span>${a === HUB ? "hazır" : "bekliyor"}</span></div>`).join("");
   $("log").innerHTML = ""; $("sonuc").textContent = "…"; $("sonuc").className = "";
 }
 function link(a, b, tool) {   // curve drawn the first time two nodes talk
@@ -121,7 +138,7 @@ function packet(from, to, color, tool) {
   const lk = link(from, to, tool); lk.classList.add("on"); clearTimeout(lk._t); lk._t = setTimeout(() => lk.classList.remove("on"), 4500 / sp());   // idle links dim again
 }
 function say(a, text, cls) {
-  bub[a]?.remove(); const [x, y] = POS[a], b = document.createElement("div"); b.className = "bub " + (cls || ""); b.style.cssText = `left:${x}%;top:${y - (a === "müşteri" ? 11 : 9)}%;--c:${COL[a]}`; b.textContent = text; st.append(b); bub[a] = b;
+  bub[a]?.remove(); const [x, y] = POS[a], b = document.createElement("div"); b.className = "bub " + (cls || ""); b.style.cssText = `left:${x}%;top:${y - (INSAN.has(a) ? 11 : 9)}%;--c:${COL[a]}`; b.textContent = text; st.append(b); bub[a] = b;
   setTimeout(() => b.isConnected && b.remove(), 4200 / sp());
 }
 function talk(a) { const n = nodes[a]; n.classList.add("talk"); setTimeout(() => n.classList.remove("talk"), 1600 / sp()); }
@@ -134,15 +151,15 @@ function fire(e) {
       delete waiting[t + ">" + f]; setRow(f, "d", "işini verdi");
       for (const x of e.closes || []) { for (const k of Object.keys(waiting)) if (k.endsWith(">" + x) && k.startsWith(t + ">") || k.startsWith(x + ">")) delete waiting[k]; setRow(x, "d", "devretti, bitti"); }
       const w = Object.keys(waiting).find(k => k.startsWith(t + ">")); setRow(t, "w", w ? "yanıt bekliyor: " + w.split(">")[1] : "çalışıyor");
-    } else if (f !== "müşteri" && t !== "müşteri") {
+    } else if (!INSAN.has(f) && !INSAN.has(t)) {
       waiting[f + ">" + t] = 1; nodes[t].classList.remove("off"); setRow(t, "w", "çalışıyor"); setRow(f, "w", "yanıt bekliyor: " + t);
     }
   } else if (e.kind === "tool") {
     const s = e.station; packet(e.agent, s, COL[e.agent], true); tools[s].classList.add("hit"); setTimeout(() => tools[s].classList.remove("hit"), 2200 / sp());
     say(e.agent, "🔧 " + e.text, "tl"); doc(e.agent, ICON[s], e.text); logLine(e.agent, null, "🔧 " + e.text);
   } else {
-    say(e.agent, e.text); talk(e.agent); logLine(e.agent, null, e.text);
-    const m = /^Sonuç:\s*(.+)/.exec(e.text); if (m) { $("sonuc").textContent = m[1]; $("sonuc").className = /satış/i.test(m[1]) ? "ok" : "no"; setRow("orkestratör", "d", "bitti"); }
+    say(e.agent, e.kind === "sonuc" ? "Sonuç: " + e.text : e.text); talk(e.agent); logLine(e.agent, null, e.text);
+    if (e.kind === "sonuc") { $("sonuc").textContent = e.text; $("sonuc").className = e.ok ? "ok" : "no"; setRow(HUB, "d", "bitti"); }
   }
 }
 function tick() {

@@ -4,7 +4,7 @@
 #   http://localhost:4400        Ç2 servis trafiği (canlı)
 #   http://localhost:4500/agents/ofis2.html, /agents/ag.html   Ç3 agent örnekleri
 #   http://localhost:4500/arayuz-secenekleri/                  ses/dokunma taslakları
-#   http://localhost:4500/agents/                              bu projenin Claude Code oturumu (yenile: python3 agents/build.py)
+#   http://localhost:4500/agents/ofis2.html?data=oturum.json   aynı görünümler, Claude Code oturumu (üret: python3 agents/altlik.py)
 cd "$(dirname "$0")"
 : > services/events.jsonl   # ponytail: her başlatmada sıfırlanır; uzun koşuda büyür, gerekirse load.py'ye döndürme ekle
 trap 'kill $(jobs -p) 2>/dev/null' EXIT

@@ -227,7 +227,7 @@ function cizIsler() {
 function cizDemolar() {
   const d = S.demolar.slice().sort(kodSira);
   $("demolar").innerHTML = `
-    <p class="bilgi">„Panelde” işaretli demolar bu sayfanın içinde çalışır. „Yerelde” olanlar VM'deki canlı sunucuya bağlı: komutu VM'de çalıştır, ana makinede <code>ssh -N -L 4400:127.0.0.1:4400 -L 4500:127.0.0.1:4500 -L 4600:127.0.0.1:4600 -L 4601:127.0.0.1:4601 vm</code> tüneli açıkken adresi aç.</p>
+    <p class="bilgi">„Panelde” işaretli demolar bu sayfanın içinde çalışır. „Yerelde” olanlar VM'deki canlı sunucuya bağlı: VM'de <code>bash ~/NexusOS/demo/run.sh</code> çalıştır (hepsini birden açar), ana makinede <code>ssh -N -L 4400:127.0.0.1:4400 -L 4500:127.0.0.1:4500 vm</code> tüneli açıkken adresi aç.</p>
     <div id="onizleme-yer"></div>
     <div class="demolar">${d.map((x, n) => `<div class="kart demo">
       ${x.gorsel ? `<img src="${esc(x.gorsel)}" alt="${esc(x.ad)} ekran görüntüsü" loading="lazy">` : ""}

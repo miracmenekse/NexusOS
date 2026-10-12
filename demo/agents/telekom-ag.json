@@ -1,57 +1,56 @@
 {
  "title": "Telekom satış · agent'lar birbirine iş devrediyor",
  "stations": {
-  "musteri": {
-   "label": "müşteri hattı",
-   "x": 0.1,
-   "y": 0.5,
-   "color": "#f2c14e"
-  },
   "crm": {
    "label": "CRM",
-   "x": 0.32,
-   "y": 0.22,
-   "color": "#4fd1ff"
+   "icon": "👥"
   },
   "katalog": {
    "label": "tarife kataloğu",
-   "x": 0.55,
-   "y": 0.22,
-   "color": "#7ee787"
+   "icon": "📋"
   },
   "kampanya": {
    "label": "kampanya motoru",
-   "x": 0.72,
-   "y": 0.45,
-   "color": "#c792ea"
+   "icon": "🏷"
   },
   "risk": {
    "label": "kredi / risk",
-   "x": 0.55,
-   "y": 0.8,
-   "color": "#ffab70"
+   "icon": "🛡"
   },
   "sozlesme": {
    "label": "sözleşme",
-   "x": 0.32,
-   "y": 0.8,
-   "color": "#79c0ff"
-  },
-  "meeting": {
-   "label": "koordinasyon",
-   "x": 0.38,
-   "y": 0.5,
-   "color": "#ff7b9c"
+   "icon": "✍"
   }
  },
  "agents": {
-  "müşteri": "Mevcut abone, faturası yüksek, rakip teklifi var",
-  "orkestratör": "Satış sürecini yönetir, işi agent'lara dağıtır",
-  "analiz": "CRM'den kullanım ve fatura geçmişini çıkarır",
-  "teklif": "Katalogdan uygun tarifeyi seçer",
-  "kampanya": "İndirim ve ek paket önerir, marj sınırını korur",
-  "risk": "Kredi skoru ve cihaz taksit uygunluğunu kontrol eder",
-  "sözleşme": "Taahhüt ve sözleşmeyi hazırlar"
+  "müşteri": {
+   "rol": "Mevcut abone, faturası yüksek, rakip teklifi var",
+   "tur": "insan"
+  },
+  "orkestratör": {
+   "rol": "Satış sürecini yönetir, işi agent'lara dağıtır",
+   "tur": "ana"
+  },
+  "analiz": {
+   "rol": "CRM'den kullanım ve fatura geçmişini çıkarır",
+   "tur": "agent"
+  },
+  "teklif": {
+   "rol": "Katalogdan uygun tarifeyi seçer",
+   "tur": "agent"
+  },
+  "kampanya": {
+   "rol": "İndirim ve ek paket önerir, marj sınırını korur",
+   "tur": "agent"
+  },
+  "risk": {
+   "rol": "Kredi skoru ve cihaz taksit uygunluğunu kontrol eder",
+   "tur": "agent"
+  },
+  "sözleşme": {
+   "rol": "Taahhüt ve sözleşmeyi hazırlar",
+   "tur": "agent"
+  }
  },
  "events": [
   {
@@ -210,9 +209,11 @@
   },
   {
    "t": 29,
-   "kind": "say",
+   "kind": "sonuc",
    "agent": "orkestratör",
-   "text": "Sonuç: satış"
+   "text": "satış",
+   "ok": true
   }
- ]
+ ],
+ "kanal": "satis-ofisi"
 }

@@ -2,7 +2,7 @@
 
     python3 traffic/yapi.py   -> yapıyı yazdırır ve kendini sınar
 """
-import ast, json, os
+import ast, json, os, sys
 
 ROOT = os.path.realpath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "services"))
 
@@ -41,12 +41,16 @@ def yapi():
     for s in services:
         for f in s["files"]:
             mods = {n.module for n in ast.walk(ast.parse(open(os.path.join(ROOT, f["file"])).read())) if isinstance(n, ast.ImportFrom) and n.module}
+            f["fail"] = [n.lineno for n in ast.walk(ast.parse(open(os.path.join(ROOT, f["file"])).read()))
+                         if isinstance(n, ast.Call) and getattr(n.func, "id", "") == "fail"]   # lines that return a failure
             f["imports"] = sorted(m.replace(".", "/") + ".py" for m in mods if m.replace(".", "/") + ".py" in dosyalar)
     return {"services": services, "calls": sorted(calls), "port_svc": port_svc, "port_file": port_file, "kok": ROOT}
 
 
 if __name__ == "__main__":
     y = yapi()
+    if "--json" in sys.argv:   # snapshot for the in-browser simulation (pano), next to the shim
+        json.dump(y, open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "yapi.json"), "w"), ensure_ascii=False)
     print(json.dumps(y, indent=1, ensure_ascii=False))
     assert ["gateway", "orders"] in map(list, y["calls"]) and ("orders", "payments") in y["calls"], y["calls"]
     assert y["port_file"][8103] == "inventory/store/stock.py", y["port_file"]

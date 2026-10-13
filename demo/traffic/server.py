@@ -43,6 +43,9 @@ class H(BaseHTTPRequestHandler):
             ok = f.startswith(root + os.sep) and f.endswith(".py") and os.path.isfile(f)
             self.send_response(200 if ok else 404); self.send_header("Content-Type", "text/plain; charset=utf-8"); self.end_headers()
             self.wfile.write(open(f, "rb").read() if ok else b""); return
+        if self.path == "/canli-sim.js":   # in-browser simulation; does nothing when served from here
+            self.send_response(200); self.send_header("Content-Type", "text/javascript"); self.end_headers()
+            self.wfile.write(open(os.path.join(HERE, "canli-sim.js"), "rb").read()); return
         if self.path == "/ariza":
             self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
             self.wfile.write(open(ARIZA, "rb").read() if os.path.exists(ARIZA) else b"{}"); return

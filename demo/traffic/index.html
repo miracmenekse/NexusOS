@@ -41,6 +41,7 @@
 <div id="alarmlar"></div>
 <div id="ariza"></div>
 <div id="legend"><b style="background:var(--ok)"></b>başarılı <b style="background:var(--err)"></b>başarısız</div>
+<script src="canli-sim.js"></script>
 <script>
 // services, their files and who calls whom come from the code (GET /yapi); columns = call depth from the user
 const Y = (() => { try { const r = new XMLHttpRequest(); r.open("GET", "/yapi", false); r.send(); return JSON.parse(r.responseText); }
@@ -235,7 +236,7 @@ function alarmCiz() {   // one card per root cause; the services it drags along 
   const kart = (k, l) => { const kok = l.find(([id]) => id === k)?.[1] || l[0][1], diger = l.map(([id]) => id).filter(id => id !== k);
     return `<div class="alarm">🔴 <b>${k}</b> ${sure(simdi - Math.min(...l.map(([, a]) => a.bas)))}'dir sorunlu
       <small>tepe: hata %${kok.tepe.hata.toFixed(0)} · p95 ${kok.tepe.p95.toFixed(0)} ms</small>
-      <small>${diger.length ? `etkilenen: <b>${diger.join(", ")}</b> (${k} servisini çağırdıkları için)` : "başka servis etkilenmedi"} · <a href="/sehir#${k}">kodda gör →</a></small></div>`; };
+      <small>${diger.length ? `etkilenen: <b>${diger.join(", ")}</b> (${k} servisini çağırdıkları için)` : "başka servis etkilenmedi"} · <a href="${window.SEHIR || "/sehir"}#${k}">kodda gör →</a></small></div>`; };
   const kapanan = KAPANAN.filter(k => !k.kok.length || k.kok.includes(k.id));   // history: root causes only
   document.getElementById("alarmlar").innerHTML = Object.entries(grup).map(([k, l]) => kart(k, l)).join("")
     + kapanan.map(k => `<div class="alarm kapali">✓ ${k.id} alarmı kapandı · ${sure(k.bit - k.bas)} sürdü<small>tepe: hata %${k.tepe.hata.toFixed(0)} · p95 ${k.tepe.p95.toFixed(0)} ms</small></div>`).join("");
@@ -274,7 +275,7 @@ function showPanel(id) {
   const ust = `<p class="${m.seviye === "sorun" ? "bad" : ""}">Son 30 sn: <b>${(m.rps ?? 0).toFixed(1)}</b>/sn · hata <b>%${(m.hata ?? 0).toFixed(0)}</b> · p95 <b>${(m.p95 ?? 0).toFixed(0)} ms</b> · ${SEV[m.seviye] || "veri yok"}</p>
     <div style="font-size:11px;color:#6b7fa3">son 5 dk · <span style="color:#ff8b96">hata %</span> · <span style="color:#ffcf8a">p95 (300 ms = üst)</span></div>
     <svg viewBox="0 0 100 50" preserveAspectRatio="none"><line x1="0" x2="100" y1="${50 - 40 / 100 * 46}" y2="${50 - 40 / 100 * 46}" stroke="#ff4d5e44" stroke-dasharray="2 2" vector-effect="non-scaling-stroke"/>${egri(g.map(b => b.hata), 100, "#ff8b96")}${egri(g.map(b => b.p95), 300, "#ffcf8a")}</svg>
-    <p><a href="/sehir#${id}">kodda gör (Ç1) →</a></p>`;
+    <p><a href="${window.SEHIR || "/sehir"}#${id}">kodda gör (Ç1) →</a></p>`;
   panel.innerHTML = `<h2>${n.label}</h2>` + ust + `<p>Toplam ${n.calls} çağrı aldı, <span class="${n.fails ? "bad" : ""}">${n.fails} başarısız</span></p><ul>${rows || "<li>henüz çağrı yok</li>"}</ul>${bad ? `<p>Hata veren dosyalar:</p><ul>${bad}</ul>` : ""}${err}`;
   panel.style.display = "block";
 }

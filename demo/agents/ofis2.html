@@ -188,7 +188,7 @@ function frame(ts) {
 $("tl").oninput = () => { seek(+$("tl").value); };
 $("diger").onclick = e => {   // ağ runs on event time: hand over the time of the last event that happened here
   const t = Math.max(0, ...evs.filter(x => x.done || x.queued).map(x => x.t));
-  e.currentTarget.href = "ag.html" + location.search + "#t" + t.toFixed(1); };
+  e.currentTarget.href = "ag.html" + (window.__Q ?? location.search) + "#t" + t.toFixed(1); };
 // anchor: feet / bottom-centre at (x%, y%), same as the original (translate(-50%, -100%))
 function sprite(n, x, y, w800) { const [w, h] = sizeOf(n, w800); cv.drawImage(IMG[n], x * W / 100 - w / 2, y * H / 100 - h, w, h); }
 function draw() {
@@ -228,7 +228,7 @@ setInterval(guncelle, 300);
 $("pl").onclick = () => { if (running) { running = false; $("pl").textContent = "▶"; } else { if (evs.every(e => e.done)) build(D); running = true; $("pl").textContent = "⏸"; } };
 $("rs").onclick = () => { build(D); running = true; $("pl").textContent = "⏸"; };
 // ?canli=<url>: a running agent system; the model is re-read every second and new events are appended
-const Q = new URLSearchParams(location.search), CANLI = Q.get("canli");
+const Q = new URLSearchParams((window.__Q ?? location.search)), CANLI = Q.get("canli");
 const ayniBas = (a, b) => JSON.stringify([Object.keys(a.agents), Object.keys(a.stations)]) === JSON.stringify([Object.keys(b.agents), Object.keys(b.stations)])
   && a.events.every((e, i) => JSON.stringify(e) === JSON.stringify(b.events[i]));
 async function izle() {
@@ -248,7 +248,7 @@ async function izle() {
 loaded.then(() => fetch(CANLI || Q.get("data") || "telekom-ag.json")).then(r => r.json()).then(d => {
   if (CANLI) { build(d); ff = true; while (!sim(0.25) && now < 36000); ff = false; $("log").scrollTop = 1e5; T = now; $("tl").max = T; running = true; requestAnimationFrame(frame); izle(); return; }
   D = d; mute = true; build(d); while (!sim(0.1) && now < 36000); T = now; mute = false;   // dry run: length of the office's own timeline
-  $("tl").max = T; const t0 = /^#t([\d.]+)$/.exec(location.hash)?.[1];
+  $("tl").max = T; const t0 = /^#t([\d.]+)$/.exec((window.__H ?? location.hash))?.[1];
   if (t0) { build(d); ff = true; while (!sim(0.1) && !evs.some(e => e.t >= +t0 && (e.queued || e.done))); ff = false; bar(); } else build(d);   // from ağ: first moment that event time is reached
   running = true; requestAnimationFrame(frame); });
 </script>

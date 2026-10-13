@@ -208,9 +208,9 @@ $("rs").onclick = () => { build(D); play(); };
 $("sp").onchange = () => $("pl").textContent === "⏸" && play();
 $("th").onclick = () => document.documentElement.classList.toggle("light");
 // the other view opens at the same moment: #t<seconds> (a plain hash survives inside the pano too)
-$("diger").onclick = e => { e.currentTarget.href = "ofis2.html" + location.search + "#t" + now.toFixed(1); };
+$("diger").onclick = e => { e.currentTarget.href = "ofis2.html" + (window.__Q ?? location.search) + "#t" + now.toFixed(1); };
 // ?canli=<url>: a running agent system; the model is re-read every second and new events are appended
-const Q = new URLSearchParams(location.search), CANLI = Q.get("canli");
+const Q = new URLSearchParams((window.__Q ?? location.search)), CANLI = Q.get("canli");
 const ayniBas = (a, b) => JSON.stringify([Object.keys(a.agents), Object.keys(a.stations)]) === JSON.stringify([Object.keys(b.agents), Object.keys(b.stations)])
   && a.events.every((e, i) => JSON.stringify(e) === JSON.stringify(b.events[i]));
 async function izle() {
@@ -224,7 +224,7 @@ async function izle() {
   setTimeout(izle, 1000);
 }
 fetch(CANLI || Q.get("data") || "telekom-ag.json").then(r => r.json()).then(d => {
-  $("tl").max = (d.events.at(-1)?.t ?? 0) + 2; build(d); const t0 = +(/^#t([\d.]+)$/.exec(location.hash)?.[1] || 0);
+  $("tl").max = (d.events.at(-1)?.t ?? 0) + 2; build(d); const t0 = +(/^#t([\d.]+)$/.exec((window.__H ?? location.hash))?.[1] || 0);
   if (CANLI) { seek(Math.max(0, (d.events.at(-1)?.t ?? 0) - 2)); izle(); } else if (t0) seek(t0);
   play(); });
 </script>

@@ -146,7 +146,7 @@ A.addEventListener("click", ev => {
   if (hit) focus(hit);
 });
 addEventListener("keydown", e => e.key === "Escape" && focus(null));
-{ const h = decodeURIComponent(location.hash.slice(1)); if (S.some(x => x[0] === h)) setTimeout(() => focus(h), 400); }   // from Ç2 "kodda gör": open zoomed (O7)
+{ const h = decodeURIComponent((window.__H ?? location.hash).slice(1)); if (S.some(x => x[0] === h)) setTimeout(() => focus(h), 400); }   // from Ç2 "kodda gör": open zoomed (O7)
 
 // K3: relations read from the code (imports between service files, HTTP calls to other services)
 function dosyaSec(k) {
@@ -276,7 +276,7 @@ async function detay(k) {
     <ul>${rec}</ul>${src ? `<pre>${code}</pre>` : "<div style='color:#7b86a0'>kaynak alınamadı</div>"}`;
   hata.style.display = "block"; hata.dataset.k = k;
 }
-const SSH = new URLSearchParams(location.search).get("ssh") || "vm";   // Remote-SSH host name for the editor link (K6)
+const SSH = new URLSearchParams((window.__Q ?? location.search)).get("ssh") || "vm";   // Remote-SSH host name for the editor link (K6)
 function izHtml(iz, hata) {   // the whole request this failure belongs to, in start order (K2)
   const l = (IZ.get(iz) || []).slice().sort((a, b) => a.bas - b.bas); if (!l.length) return "";
   return `<div style="margin-top:6px;color:#9fb0cc">isteğin yolu (iz ${iz}):</div><ol class="iz">${l.map(c =>

@@ -105,9 +105,11 @@ code { font: 12.5px var(--f-kod); background: var(--bg); border: 1px solid var(-
 .komut { display: flex; gap: 6px; align-items: stretch; }
 .komut code { flex: 1; padding: 6px 8px; display: block; }
 .komut button { font: 500 12px var(--f-govde); background: none; border: 1px solid var(--cizgi); color: var(--soluk); border-radius: 6px; cursor: pointer; padding: 0 8px; }
-.onizleme { border: 1px solid var(--cizgi); border-radius: 10px; overflow: hidden; background: #000; }
-.onizleme .ust { display: flex; justify-content: space-between; align-items: center; padding: 8px 12px; background: var(--yuzey); gap: 8px; }
-.onizleme iframe { display: block; width: 100%; height: min(70vh, 640px); border: 0; }
+.onizleme { position: fixed; inset: 0; z-index: 50; display: flex; flex-direction: column; background: #05080f; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+.onizleme .yukle { color: #9fb0cc; padding: 24px; }
+.onizleme .ust { display: flex; justify-content: space-between; align-items: center; padding: 8px 16px; background: var(--yuzey); gap: 8px; border-bottom: 1px solid var(--cizgi); }
+.onizleme .ust button { font: 500 14px var(--f-govde); color: var(--yazi); background: var(--bg); border: 1px solid var(--cizgi); border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+.onizleme iframe { display: block; width: 100%; flex: 1; border: 0; background: #05080f; }
 .bilgi { font-size: 13.5px; color: var(--soluk); background: var(--yuzey); border: 1px dashed var(--cizgi); border-radius: 8px; padding: 10px 14px; }
 .bos { color: var(--soluk); font-size: 14px; padding: 18px; border: 1px dashed var(--cizgi); border-radius: 10px; }
 @media (max-width: 560px) { .is { grid-template-columns: 1fr; } .is .detay { grid-column: 1; } .is .satir { grid-template-columns: 1fr; gap: 0; } }
@@ -127,6 +129,7 @@ code { font: 12.5px var(--f-kod); background: var(--bg); border: 1px solid var(-
 
   <section class="sekme" id="simdi" role="tabpanel"><div class="bos">Güncel adım yükleniyor…</div></section>
   <section class="sekme" id="isler" role="tabpanel" hidden><div class="bos">İşler yükleniyor…</div></section>
+  <div id="onizleme-yer"></div>
   <section class="sekme" id="demolar" role="tabpanel" hidden><div class="bos">Demolar yükleniyor…</div></section>
 </div>
 
@@ -252,8 +255,7 @@ function cizDemolar() {
   const d = S.demolar.slice().sort(kodSira);
   $("demolar").innerHTML = `
     <p class="bilgi">„Panelde” işaretli demolar bu sayfanın içinde çalışır. „Yerelde” olanlar VM'deki canlı sunucuya bağlı: VM'de <code>bash ~/NexusOS/demo/run.sh</code> çalıştır (hepsini birden açar), ana makinede <code>ssh -N -L 4400:127.0.0.1:4400 -L 4500:127.0.0.1:4500 vm</code> tüneli açıkken adresi aç.</p>
-    <div id="onizleme-yer"></div>
-    <div class="demolar">${d.map((x, n) => `<div class="kart demo">
+        <div class="demolar">${d.map((x, n) => `<div class="kart demo">
       ${x.gorsel ? `<img src="${esc(x.gorsel)}" alt="${esc(x.ad)} ekran görüntüsü" loading="lazy">` : ""}
       <div class="ic">
         <div class="bas"><span class="kod">${esc(x.cikti)}</span><span class="etiket ${x.yer === "panel" ? "e-bitti" : "e-yapiliyor"}">${x.yer === "panel" ? "Panelde" : "Yerelde"}</span></div>
@@ -264,15 +266,33 @@ function cizDemolar() {
         ${x.komut ? `<div class="komut"><code>${esc(x.komut)}</code><button data-kopya="${esc(x.komut)}">Kopyala</button></div>` : ""}
         ${x.adres ? `<p class="kod">${esc(x.adres)}</p>` : ""}
       </div></div>`).join("") || `<div class="bos">Henüz demo eklenmedi.</div>`}</div>`;
-  if (onizlenen) onizle(onizlenen.yol, onizlenen.ad);
 }
-function onizle(yol, ad) {
+// demos run inside the pano as srcdoc frames: the viewer does not load our files as frame URLs, but fetch works.
+// The page gets a <base> to its folder (its own files load), its query/hash as __Q/__H, and its relative links come back here.
+async function onizle(yol, ad) {
   onizlenen = yol ? { yol, ad } : null;
-  $("onizleme-yer").innerHTML = yol ? `<div class="onizleme"><div class="ust"><b>${esc(ad)}</b>
-    <span class="baglar"><a href="${esc(yol)}" target="_blank" rel="noopener">Yeni sekmede ↗</a><button data-kapat>Kapat</button></span></div>
-    <iframe src="${esc(yol)}" title="${esc(ad)}"></iframe></div>` : "";
-  if (yol) $("onizleme-yer").scrollIntoView({ block: "start" });
+  if (!yol) { $("onizleme-yer").innerHTML = ""; document.body.style.overflow = ""; return; }
+  const m = /^([^?#]*)(\?[^#]*)?(#.*)?$/.exec(yol), dosya = m[1], dir = dosya.slice(0, dosya.lastIndexOf("/") + 1);
+  $("onizleme-yer").innerHTML = `<div class="onizleme"><div class="ust"><b>${esc(ad)}</b><button data-kapat>✕ Kapat</button></div><div class="yukle">Yükleniyor…</div></div>`;
+  document.body.style.overflow = "hidden";
+  let html;
+  try { const r = await fetch(new URL(dosya, document.baseURI)); if (!r.ok) throw new Error(r.status); html = await r.text(); }
+  catch (e) { $("onizleme-yer").querySelector(".yukle").textContent = `Açılamadı (${e.message}). Sayfayı yenileyip tekrar dene.`; return; }
+  const ek = `<base href="${new URL(dir, document.baseURI).href}"><script>window.__Q=${JSON.stringify(m[2] || "")};window.__H=${JSON.stringify(m[3] || "")};
+addEventListener("click",e=>{const a=e.target.closest("a[href]");if(!a||e.defaultPrevented)return;const h=a.getAttribute("href");
+if(/^[a-z][a-z0-9+.-]*:/i.test(h)||h.startsWith("#"))return;e.preventDefault();parent.postMessage({nexusAc:h},"*");});<\/script>`;
+  html = html.includes("<head>") ? html.replace("<head>", "<head>" + ek) : ek + html;
+  if (onizlenen?.yol !== yol) return;   // another demo was picked meanwhile
+  const f = document.createElement("iframe"); f.title = ad; f.srcdoc = html;
+  $("onizleme-yer").querySelector(".yukle").replaceWith(f);
+  onizlenen.dir = dir;
 }
+addEventListener("message", e => {   // a link inside a demo (ofis ↔ ağ, kodda gör): open it here
+  const h = e.data?.nexusAc; if (typeof h !== "string" || !onizlenen) return;
+  onizle(onizlenen.dir + h.replace(/^\.\//, ""), onizlenen.ad);
+});
+addEventListener("keydown", e => { if (e.key === "Escape" && onizlenen) onizle(null); });
+$("onizleme-yer").addEventListener("click", e => { if (e.target.closest("[data-kapat]")) onizle(null); });
 $("demolar").addEventListener("click", e => {
   const o = e.target.closest("[data-onizle]"); if (o) return onizle(o.dataset.onizle, o.dataset.ad);
   if (e.target.closest("[data-kapat]")) return onizle(null);

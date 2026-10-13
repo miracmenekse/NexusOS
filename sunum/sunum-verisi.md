@@ -161,6 +161,13 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - **Sunumda:** 5. Çıktılarımız (Ç3) + 6. Demo; canlı gösterimde projeyi yapan agent'ı izlemek (açılış ya da kapanış).
 - **İz:** WBS 6.11, 6.12, 6.13, 6.14, d23
 
+### 2026-10-13 · Ç1 geliştirici için: isteğin yolu, dosya ilişkileri, "düzeldi mi?"
+- **Ne:** Her istek bir iz kimliği taşıyor; hatanın panelinde isteğin tüm yolu sırayla görünüyor (kullanıcı → gateway → orders → inventory, süreler; hatalı halka kırmızı). Bir binaya dokununca koddan okunan ilişkiler çiziliyor (kullandığı / onu kullanan dosyalar). Kod kaydedilince servis kendiliğinden yeniden başlıyor, şehir 2 sn içinde yeniden çiziliyor, değişen bina işaretleniyor; hatalı dosya düzeltildiyse bina yeşile dönüp "✓ düzeldi (53 çağrı temiz)" yazıyor. "VS Code'da aç" dosyayı hatalı satırda açıyor.
+- **Neden önemli:** Geliştiricinin döngüsü (hatayı gör → yolunu izle → koda git → düzelt → düzeldiğini gör) tek ekranda kapanıyor; log ve editör arasında gidip gelmek yok.
+- **Kanıt:** `demo/tasarim/index.html`, `demo/traffic/yapi.py`, `demo/services/common/web.py` (iz), `demo/services/calistir.py`, `gorseller/2026-10-13-c1-iz.png`, `gorseller/2026-10-13-c1-iliski.png`, `gorseller/2026-10-13-c1-duzeldi.png`
+- **Sunumda:** 6. Demo; canlı gösterimde stock.py'yi düzeltip binanın yeşile dönmesi.
+- **İz:** WBS 6.15, 6.16, d25
+
 ## 3. Referans projeler
 
 | Proje | ★ / lisans / son (2026-10-11) | Ne aldık | Çıktı |
@@ -195,6 +202,9 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 | `sunum/gorseller/2026-10-12-c3-altlik-ofis-telekom.png` | Ç3 altlığı: sprite ofis, telekom senaryosu |
 | `sunum/gorseller/2026-10-13-c1-neon-koddan.png` | Ç1 Neon şehir: koddan okunan yapı, iki dosya canlı hatada |
 | `sunum/gorseller/2026-10-13-c1-neon-gercek-satir.png` | Ç1 "koda git": hatayı döndüren satır (stock.py:16) işaretli |
+| `sunum/gorseller/2026-10-13-c1-iz.png` | Ç1: hata paneli, isteğin uçtan uca yolu ve VS Code bağlantısı |
+| `sunum/gorseller/2026-10-13-c1-iliski.png` | Ç1: order_handler.py'nin koddan okunan ilişkileri |
+| `sunum/gorseller/2026-10-13-c1-duzeldi.png` | Ç1: stock.py düzeltildi, bina yeşil, "✓ düzeldi" |
 | `sunum/gorseller/2026-10-13-c3-takilma-ag.png` | Ç3 ağ: takılma uyarısı ve kampanya ayrıntı paneli |
 | `sunum/gorseller/2026-10-13-c3-takilma-ofis.png` | Ç3 ofis: agent şeridi, takılma uyarısı, turuncu halka |
 | `sunum/gorseller/2026-10-13-c3-canli-oturum.png` | Ç3 canlı: bu Claude Code oturumu ofiste (iç bilgi içerir, ayıklanmadan kullanma) |

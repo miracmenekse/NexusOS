@@ -6,7 +6,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 HERE = os.path.dirname(os.path.abspath(__file__))
 EVENTS = os.path.join(HERE, "..", "services", "events.jsonl")
 from yapi import yapi
-YAPI = yapi()   # services, files, port -> service / handler file, read from the code at start
+YAPI = yapi()   # services, files, port -> service / handler file; /yapi re-reads the code on every request (K4)
 PORTS, PORT_FILE = YAPI["port_svc"], YAPI["port_file"]
 
 
@@ -15,7 +15,8 @@ def to_edge(ev):
     src = ev["caller"].split("/")[0]
     return {"from": src, "to": PORTS.get(port, "?"), "ok": ev["ok"], "ms": ev["ns"] / 1e6,
             "fromFile": ev["caller"], "toFile": PORT_FILE.get(port), "at": (ev.get("detail") or {}).get("at"),
-            "path": "/" + ev["url"].split("/", 3)[3], "detail": ev.get("detail")}
+            "path": "/" + ev["url"].split("/", 3)[3], "detail": ev.get("detail"),
+            "iz": ev.get("iz"), "bas": (ev["t"] - ev["ns"]) / 1e6}   # trace id + start (ms): the page rebuilds each request's path (K2)
 
 
 class H(BaseHTTPRequestHandler):
@@ -28,7 +29,7 @@ class H(BaseHTTPRequestHandler):
             self.wfile.write(open(f, "rb").read() if ok else b""); return
         if self.path == "/yapi":
             self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
-            self.wfile.write(json.dumps(YAPI).encode()); return
+            self.wfile.write(json.dumps(yapi()).encode()); return
         if self.path != "/events":
             page = os.path.join(HERE, "..", "tasarim", "index.html") if self.path.startswith("/sehir") else os.path.join(HERE, "index.html")
             body = open(page, "rb").read()

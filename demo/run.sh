@@ -9,7 +9,7 @@
 cd "$(dirname "$0")"
 : > services/events.jsonl   # ponytail: her başlatmada sıfırlanır; uzun koşuda büyür, gerekirse load.py'ye döndürme ekle
 trap 'kill $(jobs -p) 2>/dev/null' EXIT
-for s in payments inventory orders gateway; do (cd services && exec python3 $s/app.py) & done
+for s in payments inventory orders gateway; do python3 services/calistir.py $s & done   # kod değişince yeniden başlar
 sleep 1
 python3 traffic/load.py &
 python3 agents/canli.py &   # demo/ statik + /canli/oturum.json (çalışan Claude Code oturumu)

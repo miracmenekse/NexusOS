@@ -34,6 +34,8 @@
   #hata pre div { padding: 0 10px; white-space: pre; } #hata pre .hl { background: #ff4d5e33; border-left: 3px solid #ff4d5e; padding-left: 7px; } #hata pre .ln { color: #566079; margin-right: 10px; }
   #hata .flow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin: 4px 0; } #hata .flow span { background: #13203a; border: 1px solid #2b4a7a; border-radius: 6px; padding: 1px 7px; }
   #hata ul { margin: 4px 0 0; padding-left: 18px; color: #9fb0cc; }
+  #hata .iz { margin: 4px 0 0; padding-left: 20px; } #hata .iz li { margin: 2px 0; } #hata .iz .kirmizi { color: #ff9aa5; }
+  #hata .vsc { margin-left: auto; color: #4fd1ff; text-decoration: none; }
   .cap button { margin-left: 6px; background: #ff4d5e; color: #fff; border: 0; border-radius: 6px; padding: 1px 8px; cursor: pointer; font: inherit; }
   .cap { display: none; margin: 0 16px 12px; padding: 8px 12px; border-radius: 8px; background: #12223f; color: #ffd0d5; }
   .cap b { color: #fff; }
@@ -49,11 +51,11 @@
 <script>
 // structure comes from the code: GET /yapi (traffic/yapi.py reads services/ with ast)
 // ponytail: senkron istek; sayfa yalnız :4400/sehir'den açılır, yapı küçük
-const Y = (() => { try { const r = new XMLHttpRequest(); r.open("GET", "/yapi", false); r.send(); return JSON.parse(r.responseText); }
+let Y = (() => { try { const r = new XMLHttpRequest(); r.open("GET", "/yapi", false); r.send(); return JSON.parse(r.responseText); }
   catch { return { services: [], calls: [] }; } })();
-const S = Y.services.map((s, i) => [s.name, i % 2, Math.floor(i / 2),   // service, grid x,y, files [name, height, calls]
-  s.files.map(f => [f.file.split("/").pop(), 1 + f.lines / 5, f.calls || null])]);
-const CALLS = Y.calls;
+// service, grid x,y, files [name, height, calls, path, imports]
+const sOf = y => y.services.map((s, i) => [s.name, i % 2, Math.floor(i / 2), s.files.map(f => [f.file.split("/").pop(), 1 + f.lines / 5, f.calls || null, f.file, f.imports || []])]);
+let S = sOf(Y), CALLS = Y.calls;
 const NS = "http://www.w3.org/2000/svg";
 const REG = {}, CP = {};   // live view: file key "svc/file.py" -> svg parts; "a>b" -> call arc
 let cur = null, curCall = null;   // service / call being drawn: lets the zoom dim everything else
@@ -97,23 +99,25 @@ function draw(id, th) {
   }
   curCall = null;
   const order = S.flatMap(([n]) => L[n].files.map(b => ({ ...b, n }))).sort((p, q) => (p.x + p.y) - (q.x + q.y));
-  for (const { f: [file, h, src], x, y, n } of order) {   // src: services this file calls; it turns amber when such a call fails
+  for (const { f: [file, h, src, yol, imp], x, y, n } of order) {   // src: services this file calls; it turns amber when such a call fails
     cur = n;
     const top = box(svg, x, y, 1.2, 1.2, 4 + h * 9, o, th.good, src ? "src" : null);
+    for (const p of [top, ...top._f]) p.dataset.k = n + "/" + file;   // tap a building (K3)
     el(svg, "text", { x: iso(x + 0.6, y + 0.6, 0, o)[0], y: iso(x + 0.6, y + 0.6, 4 + h * 9, o)[1] - 6, class: "fl" }, file);
     const [tx, ty] = iso(x + 0.6, y + 0.6, 4 + h * 9, o);
-    REG[n + "/" + file] = { top, th, src,
+    REG[n + "/" + file] = { top, th, src, yol, imp, xy: [tx, ty],
       c: el(svg, "circle", { cx: tx, cy: ty - 14, r: 16, fill: "#ff4d5e33", visibility: "hidden" }),
       t: el(svg, "text", { x: tx, y: ty - 34, "text-anchor": "middle", "font-size": 12, fill: "#ffb3bb", visibility: "hidden" }) };
   }
   cur = null;
 }
 const o = { x: 320, y: 80, k: 19 };
-draw("a", { o, label: 13, text: "#9fc4ff", callW: 3, call: "#2fd0ff55", callErr: "#ff3b4e88",
-  plate: ["#11284a", "#0a1a33", "#0d2140"], good: ["#4fd1ffcc", "#1b6f99cc", "#2a8fc4cc"], bad: ["#ff4d5e", "#a11a2a", "#d02a3c"] });
+const TH = { o, label: 13, text: "#9fc4ff", callW: 3, call: "#2fd0ff55", callErr: "#ff3b4e88",
+  plate: ["#11284a", "#0a1a33", "#0d2140"], good: ["#4fd1ffcc", "#1b6f99cc", "#2a8fc4cc"], bad: ["#ff4d5e", "#a11a2a", "#d02a3c"] };
+draw("a", TH);
 
 // A: tap a service -> zoom into the group; the failing file and its sender show inside
-const A = document.getElementById("a"), cap = document.getElementById("acap"), L0 = layout(o);
+const A = document.getElementById("a"), cap = document.getElementById("acap"); let L0 = layout(o), SECILI = null;
 const vb = { x: 0, y: 0, w: 640, h: 420 }; let tgt = { ...vb }, raf;
 function go(t) {
   tgt = t; cancelAnimationFrame(raf);
@@ -124,6 +128,7 @@ function go(t) {
   })();
 }
 function focus(name) {
+  dosyaSec(null);
   if (!name) { A.removeAttribute("data-f"); cap.style.display = "none"; return go({ x: 0, y: 0, w: 640, h: 420 }); }
   const [cx, cy] = center(L0, name, o);
   A.setAttribute("data-f", name); A.querySelectorAll("[data-s]").forEach(e => e.classList.toggle("on", e.dataset.s === name));
@@ -132,12 +137,51 @@ function focus(name) {
   go({ x: cx - 125, y: cy - 92, w: 250, h: 164 });
 }
 A.addEventListener("click", ev => {
-  if (A.dataset.f) return focus(null);   // zoomed: any tap goes back
+  const b = ev.target.closest("[data-k]");
+  if (A.dataset.f && b?.dataset.k.startsWith(A.dataset.f + "/")) return dosyaSec(SECILI === b.dataset.k ? null : b.dataset.k);   // zoomed: a building shows its relations
+  if (A.dataset.f) return focus(null);   // zoomed: tap elsewhere goes back
   const m = A.getScreenCTM().inverse(), p = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(m);
   const hit = S.map(([n]) => n).find(n => { const [cx, cy] = center(L0, n, o); return ((p.x - cx) / 110) ** 2 + ((p.y - cy - 10) / 62) ** 2 < 1; });
   if (hit) focus(hit);
 });
 addEventListener("keydown", e => e.key === "Escape" && focus(null));
+
+// K3: relations read from the code (imports between service files, HTTP calls to other services)
+function dosyaSec(k) {
+  SECILI = k; A.querySelectorAll(".rel").forEach(e => e.remove());
+  if (!k) return;
+  const r = REG[k], byYol = Object.fromEntries(Object.entries(REG).map(([kk, v]) => [v.yol, kk]));
+  const cizgi = (a, b, renk) => el(A, "line", { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: renk, "stroke-width": 1.4, "stroke-dasharray": "3 3", class: "rel" });
+  for (const y of r.imp) if (byYol[y]) cizgi(r.xy, REG[byYol[y]].xy, "#7ee787");
+  for (const [kk, v] of Object.entries(REG)) if (v.imp.includes(r.yol)) cizgi(v.xy, r.xy, "#ffb84d");
+  cap.innerHTML = iliski(k);
+}
+function iliski(k) {
+  const r = REG[k], ad = y => `<b>${y.split("/").pop()}</b>`;
+  const onu = Object.values(REG).filter(v => v.imp.includes(r.yol)).map(v => ad(v.yol));
+  return `<b>${r.yol}</b> · <span style="color:#7ee787">kullandığı:</span> ${r.imp.map(ad).join(", ") || "—"}
+    · <span style="color:#ffb84d">onu kullanan:</span> ${onu.join(", ") || "—"}${r.src ? ` · HTTP ile çağırdığı: <b>${r.src.join(", ")}</b>` : ""}
+    ${FILE[k]?.fails ? ` · <button onclick="detay('${k}')">hata: koda git</button>` : ""}`;
+}
+
+// K4/K5: the code changed -> redraw from the new structure, mark what changed, then watch whether a failing file is fixed
+const DEG = {}, DUZ = {};
+function yeniden(y) {
+  const eski = Object.fromEntries(Y.services.flatMap(s => s.files.map(f => [f.file, f])));
+  for (const s of y.services) for (const f of s.files) if (eski[f.file]?.degisim !== f.degisim) {
+    const k = s.name + "/" + f.file.split("/").pop(); DEG[k] = performance.now();
+    if (FILE[k]?.fails) DUZ[k] = { ok: 0, fail: 0 };   // was failing: count what happens from now on
+  }
+  Y = y; S = sOf(y); CALLS = y.calls;
+  for (const k in REG) delete REG[k]; for (const k in CP) delete CP[k];
+  const f = A.dataset.f, sec = SECILI; A.replaceChildren(); draw("a", TH); L0 = layout(o);
+  if (f) { focus(f); if (sec && REG[sec]) dosyaSec(sec); }
+}
+let yapiJSON = JSON.stringify(Y);
+setInterval(async () => {
+  const y = await fetch("/yapi", { cache: "no-store" }).then(r => r.json()).catch(() => null);
+  if (y && JSON.stringify(y) !== yapiJSON) { yapiJSON = JSON.stringify(y); yeniden(y); }
+}, 2000);
 
 // ---- live data: /events from the traffic server (open this page at :4400/sehir) ----
 const FILE = {}, EDGE = {}, ago = (x) => performance.now() - (x?.last ?? -1e9), HOT = 4000;
@@ -172,20 +216,24 @@ es.onmessage = m => {
 };
 setInterval(() => {   // repaint: red while failing, calm again after 4 s without errors
   for (const [k, r] of Object.entries(REG)) {
-    const v = FILE[k], bad = v && ago(v) < HOT, ajan = DOKUN[k]?.until > performance.now(), col = bad ? r.th.bad : ajan ? AJAN : r.th.good;
+    const v = FILE[k], bad = v && ago(v) < HOT, ajan = DOKUN[k]?.until > performance.now(), du = DUZ[k], duzeldi = du && du.ok >= 5 && !du.fail,
+      degisti = performance.now() - (DEG[k] ?? -1e9) < 8000, col = bad ? r.th.bad : duzeldi ? DUZELDI : ajan ? AJAN : degisti ? DEGISTI : r.th.good;
     r.top.setAttribute("fill", col[0]); r.top._f[0].setAttribute("fill", col[1]); r.top._f[1].setAttribute("fill", col[2]);
     r.top.classList.toggle("pulse", !!bad);
     r.c.setAttribute("visibility", bad ? "visible" : "hidden"); r.t.setAttribute("visibility", v?.fails ? "visible" : "hidden");
-    if (v?.fails) r.t.textContent = `${base(k)} · ${v.fails} hata`;
+    if (v?.fails) r.t.textContent = du?.fail ? `hâlâ hatalı · ${du.fail}` : `${base(k)} · ${v.fails} hata`;
+    if (!bad && (duzeldi || degisti)) { r.t.setAttribute("visibility", "visible"); r.t.textContent = duzeldi ? `✓ düzeldi (${du.ok} çağrı temiz)` : "✎ değişti"; }
+    r.t.setAttribute("fill", bad ? "#ffb3bb" : duzeldi ? "#9ff0c0" : ajan ? "#e0c6ff" : degisti ? "#e6fbff" : "#ffb3bb");
     if (ajan && !bad) { r.t.setAttribute("visibility", "visible"); r.t.textContent = `✎ ${DOKUN[k].kim}: ${DOKUN[k].ne}`; }
     if (r.src) r.top.classList.toggle("warn", r.src.some(t => ago(EDGE[svcOf(k) + ">" + t]) < HOT));
     if (r.src) for (const p of r.top._f) p.classList.toggle("warn", r.top.classList.contains("warn"));
   }
   for (const [k, c] of Object.entries(CP)) c.bp.setAttribute("stroke", ago(EDGE[k]) < HOT ? c.th.callErr : c.th.call);
-  if (A.dataset.f) cap.innerHTML = why(A.dataset.f);
+  if (A.dataset.f) cap.innerHTML = SECILI && REG[SECILI] ? iliski(SECILI) : why(A.dataset.f);
 }, 300);
 
 // ---- agent bridge (G13): when an agent reads or edits a service file (Claude Code, :4500/canli), its building glows
+const DUZELDI = ["#6ee7a0dd", "#1f8a52dd", "#3cb878dd"], DEGISTI = ["#e6fbffee", "#4fa8c8ee", "#7cc8e6ee"];
 const DOKUN = {}, AJAN = ["#c792eacc", "#6b3fa0cc", "#8f5cc4cc"], NE = { Read: "okudu", Edit: "düzenledi", Write: "yazdı" };
 let gorulen = -1;
 async function ajanIzle() {
@@ -219,10 +267,18 @@ async function detay(k) {
   const code = lines.map((l, i) => `<div class="${hit.includes(i) ? "hl" : ""}"><span class="ln">${i + 1}</span>${l.replace(/[<&>]/g, c => ({ "<": "&lt;", "&": "&amp;", ">": "&gt;" }[c]))}</div>`).join("");
   const rec = (HIST[k] || []).slice(-4).reverse().map(h => `<li>${h.t} · ${h.ms.toFixed(0)} ms · ${h.detail?.reason || ""} ${Object.entries(h.detail || {}).filter(([k]) => !["ok", "reason", "at"].includes(k)).map(([k, v]) => k + "=" + v).join(" ")}</li>`).join("");
   hata.innerHTML = `<span class="x" onclick="this.parentNode.style.display='none'">✕</span><h3>⚠ ${base(k)}: ${e.path} başarısız</h3>
-    <div class="flow"><span>${e.fromFile || e.from}</span> → <span>${e.at || file}</span></div>${e.detail?.reason ? `<div><b>${e.detail.reason}</b></div>` : ""}
+    <div class="flow"><span>${e.fromFile || e.from}</span> → <span>${e.at || file}</span>
+      <a class="vsc" href="vscode://vscode-remote/ssh-remote+${SSH}${Y.kok}/${file}${at ? ":" + at : ""}">VS Code'da aç ↗</a></div>
+    ${izHtml(e.iz, e)}${e.detail?.reason ? `<div><b>${e.detail.reason}</b></div>` : ""}
     <div>${v.fails} hata / ${v.calls} çağrı · ${ago(v) < HOT ? "<b style='color:#ff9aa5'>şu an sürüyor</b>" : "son 4 sn temiz"}</div>
     <ul>${rec}</ul>${src ? `<pre>${code}</pre>` : "<div style='color:#7b86a0'>kaynak alınamadı</div>"}`;
   hata.style.display = "block"; hata.dataset.k = k;
+}
+const SSH = new URLSearchParams(location.search).get("ssh") || "vm";   // Remote-SSH host name for the editor link (K6)
+function izHtml(iz, hata) {   // the whole request this failure belongs to, in start order (K2)
+  const l = (IZ.get(iz) || []).slice().sort((a, b) => a.bas - b.bas); if (!l.length) return "";
+  return `<div style="margin-top:6px;color:#9fb0cc">isteğin yolu (iz ${iz}):</div><ol class="iz">${l.map(c =>
+    `<li class="${c.ok ? "" : "kirmizi"}">${c.fromFile || c.from} → <b>${c.at || c.toFile}</b> ${c.path} · ${c.ms.toFixed(0)} ms ${c.ok ? "✓" : "✗ " + (c.detail?.reason || "")}</li>`).join("")}</ol>`;
 }
 const prevOn = {};
 function sweep() {   // new failure = file was calm and is red now: raise an alert
@@ -232,7 +288,10 @@ function sweep() {   // new failure = file was calm and is red now: raise an ale
   if (hata.dataset.k && hata.style.display === "block") detay(hata.dataset.k);   // keep the numbers live
 }
 setInterval(sweep, 400);
-const _om = es.onmessage; es.onmessage = m => { _om(m); const e = JSON.parse(m.data), k = key(e.to, e.at?.split(":")[0] || e.toFile); if (!e.ok && k) (HIST[k] ??= []).push({ t: new Date().toLocaleTimeString("tr"), ms: e.ms, detail: e.detail }); };
+const IZ = new Map();   // trace id -> calls of one request (K2); oldest dropped after 400
+const _om = es.onmessage; es.onmessage = m => { _om(m); const e = JSON.parse(m.data), k = key(e.to, e.at?.split(":")[0] || e.toFile);
+  if (e.iz) { if (!IZ.has(e.iz)) { IZ.set(e.iz, []); if (IZ.size > 400) IZ.delete(IZ.keys().next().value); } IZ.get(e.iz).push(e); }
+  if (k && DUZ[k]) e.ok ? DUZ[k].ok++ : e.at && DUZ[k].fail++;   /* only failures the code returned (`at`); a restart's refused connections are not */ if (!e.ok && k) (HIST[k] ??= []).push({ t: new Date().toLocaleTimeString("tr"), ms: e.ms, detail: e.detail }); };
 </script>
 </body>
 </html>

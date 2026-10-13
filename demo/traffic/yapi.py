@@ -18,7 +18,8 @@ def _py(svc):
 def yapi():
     services, port_svc, port_file, calls = [], {}, {}, set()
     for svc in sorted(d for d in os.listdir(ROOT) if os.path.isfile(os.path.join(ROOT, d, "app.py"))):
-        files = [{"file": f, "lines": sum(1 for l in open(os.path.join(ROOT, f)) if l.strip())} for f in _py(svc)]
+        files = [{"file": f, "lines": sum(1 for l in open(os.path.join(ROOT, f)) if l.strip()),
+                  "degisim": os.path.getmtime(os.path.join(ROOT, f))} for f in _py(svc)]   # changes on every save (K4)
         services.append({"name": svc, "files": files})
         app = ast.parse(open(os.path.join(ROOT, svc, "app.py")).read())
         mods = {a.asname or a.name: n.module for n in ast.walk(app) if isinstance(n, ast.ImportFrom) for a in n.names}
@@ -35,7 +36,13 @@ def yapi():
                     if port_svc[port] not in f.setdefault("calls", []):
                         f["calls"].append(port_svc[port])
                     calls.add((s["name"], port_svc[port]))
-    return {"services": services, "calls": sorted(calls), "port_svc": port_svc, "port_file": port_file}
+    # file relations inside the city: `from orders.clients.x import y` -> orders/clients/x.py (shared common/ is not a building)
+    dosyalar = {f["file"] for s in services for f in s["files"]}
+    for s in services:
+        for f in s["files"]:
+            mods = {n.module for n in ast.walk(ast.parse(open(os.path.join(ROOT, f["file"])).read())) if isinstance(n, ast.ImportFrom) and n.module}
+            f["imports"] = sorted(m.replace(".", "/") + ".py" for m in mods if m.replace(".", "/") + ".py" in dosyalar)
+    return {"services": services, "calls": sorted(calls), "port_svc": port_svc, "port_file": port_file, "kok": ROOT}
 
 
 if __name__ == "__main__":
@@ -44,4 +51,6 @@ if __name__ == "__main__":
     assert ["gateway", "orders"] in map(list, y["calls"]) and ("orders", "payments") in y["calls"], y["calls"]
     assert y["port_file"][8103] == "inventory/store/stock.py", y["port_file"]
     assert all(f["lines"] > 0 for s in y["services"] for f in s["files"])
+    oh = next(f for s in y["services"] for f in s["files"] if f["file"].endswith("order_handler.py"))
+    assert "orders/clients/inventory_client.py" in oh["imports"] and "orders/model/order.py" in oh["imports"], oh
     print("yapi tamam:", len(y["services"]), "servis,", sum(len(s["files"]) for s in y["services"]), "dosya")

@@ -1,5 +1,5 @@
 """Tiny stdlib HTTP helpers shared by the demo services; every call is logged for the dynamic view."""
-import json, os, sys, time, traceback, urllib.request
+import json, os, sys, threading, time, traceback, urllib.request, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 EVENTS = os.path.join(os.path.dirname(__file__), "..", "events.jsonl")
@@ -11,6 +11,7 @@ def log_event(**e):
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+_iz = threading.local()   # trace id of the request this thread is serving; outgoing calls carry it on
 
 
 def _where(filename, line):
@@ -24,16 +25,16 @@ def fail(reason, **info):
 
 
 def call(method, url, body=None, caller=""):
-    start = time.time_ns()
+    start, iz = time.time_ns(), getattr(_iz, "id", None) or uuid.uuid4().hex[:12]   # no request in hand: a new trace starts
     req = urllib.request.Request(url, data=json.dumps(body or {}).encode(), method=method,
-                                 headers={"Content-Type": "application/json"})
+                                 headers={"Content-Type": "application/json", "X-Iz": iz})
     try:
         with urllib.request.urlopen(req, timeout=5) as r:
             out = json.loads(r.read() or b"{}")
             ok = out.get("ok", True) is not False
     except Exception as ex:
         out, ok = {"error": str(ex)}, False
-    log_event(caller=caller, method=method, url=url, ok=ok, ns=time.time_ns() - start,
+    log_event(caller=caller, method=method, url=url, ok=ok, ns=time.time_ns() - start, iz=iz,
               detail=None if ok else out)
     return out
 
@@ -47,6 +48,7 @@ def serve(port, routes):
                 self.send_response(404); self.end_headers(); return
             n = int(self.headers.get("Content-Length") or 0)
             body = json.loads(self.rfile.read(n) or b"{}")
+            _iz.id = self.headers.get("X-Iz")
             try:
                 out = fn(body)
             except Exception as ex:   # crash: point at the deepest line inside the services

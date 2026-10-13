@@ -145,6 +145,7 @@ A.addEventListener("click", ev => {
   if (hit) focus(hit);
 });
 addEventListener("keydown", e => e.key === "Escape" && focus(null));
+{ const h = decodeURIComponent(location.hash.slice(1)); if (S.some(x => x[0] === h)) setTimeout(() => focus(h), 400); }   // from Ç2 "kodda gör": open zoomed (O7)
 
 // K3: relations read from the code (imports between service files, HTTP calls to other services)
 function dosyaSec(k) {

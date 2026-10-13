@@ -19,7 +19,23 @@ def to_edge(ev):
             "iz": ev.get("iz"), "bas": (ev["t"] - ev["ns"]) / 1e6}   # trace id + start (ms): the page rebuilds each request's path (K2)
 
 
+ARIZA = os.path.join(HERE, "..", "services", "ariza.json")
+
+
 class H(BaseHTTPRequestHandler):
+    def do_POST(self):   # O6: {"svc": {"gecikme_ms": 0-5000, "hata": 0-1}}; {} clears every fault
+        if self.path != "/ariza":
+            self.send_response(404); self.end_headers(); return
+        try:
+            body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
+            temiz = {s: {"gecikme_ms": max(0, min(5000, float(v.get("gecikme_ms", 0)))), "hata": max(0.0, min(1.0, float(v.get("hata", 0))))}
+                     for s, v in body.items() if s in YAPI["port_svc"].values()}
+        except (ValueError, AttributeError, TypeError):
+            self.send_response(400); self.end_headers(); return
+        json.dump(temiz, open(ARIZA, "w"))
+        self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
+        self.wfile.write(json.dumps(temiz).encode())
+
     def do_GET(self):
         if self.path.startswith("/kod?"):   # source of one service file, for the error view
             root = os.path.realpath(os.path.join(HERE, "..", "services"))
@@ -27,6 +43,9 @@ class H(BaseHTTPRequestHandler):
             ok = f.startswith(root + os.sep) and f.endswith(".py") and os.path.isfile(f)
             self.send_response(200 if ok else 404); self.send_header("Content-Type", "text/plain; charset=utf-8"); self.end_headers()
             self.wfile.write(open(f, "rb").read() if ok else b""); return
+        if self.path == "/ariza":
+            self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
+            self.wfile.write(open(ARIZA, "rb").read() if os.path.exists(ARIZA) else b"{}"); return
         if self.path == "/yapi":
             self.send_response(200); self.send_header("Content-Type", "application/json"); self.end_headers()
             self.wfile.write(json.dumps(yapi()).encode()); return

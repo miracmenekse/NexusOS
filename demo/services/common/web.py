@@ -1,5 +1,5 @@
 """Tiny stdlib HTTP helpers shared by the demo services; every call is logged for the dynamic view."""
-import json, os, sys, threading, time, traceback, urllib.request, uuid
+import json, os, random, sys, threading, time, traceback, urllib.request, uuid
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 EVENTS = os.path.join(os.path.dirname(__file__), "..", "events.jsonl")
@@ -11,6 +11,8 @@ def log_event(**e):
 
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+ARIZA = os.path.join(ROOT, "ariza.json")   # Ç2 O6: {"payments": {"gecikme_ms": 800, "hata": 0.5}}, read on every request
+SVC = os.path.basename(os.path.dirname(os.path.abspath(sys.argv[0])))   # the service this process runs (svc/app.py)
 _iz = threading.local()   # trace id of the request this thread is serving; outgoing calls carry it on
 
 
@@ -50,7 +52,16 @@ def serve(port, routes):
             body = json.loads(self.rfile.read(n) or b"{}")
             _iz.id = self.headers.get("X-Iz")
             try:
-                out = fn(body)
+                with open(ARIZA) as f:
+                    a = json.load(f).get(SVC, {})
+            except (OSError, ValueError, AttributeError):   # no file / half-written / not a dict: no fault
+                a = {}
+            time.sleep(min(float(a.get("gecikme_ms", 0)), 5000) / 1000)
+            try:
+                if random.random() < float(a.get("hata", 0)):
+                    out = {"ok": False, "reason": f"enjekte arıza ({SVC}, ariza.json)"}
+                else:
+                    out = fn(body)
             except Exception as ex:   # crash: point at the deepest line inside the services
                 tb = [t for t in traceback.extract_tb(ex.__traceback__) if t.filename.startswith(ROOT)]
                 out = {"ok": False, "reason": f"{type(ex).__name__}: {ex}", "at": _where(tb[-1].filename, tb[-1].lineno)}

@@ -168,6 +168,13 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - **Sunumda:** 6. Demo; canlı gösterimde stock.py'yi düzeltip binanın yeşile dönmesi.
 - **İz:** WBS 6.15, 6.16, d25
 
+### 2026-10-13 · Ç2 operasyon için: sağlık, alarm, kök neden
+- **Ne:** Servisler ve bağlantıları artık koddan geliyor. Üst bantta sistemin durumu (sağlıklı / dikkat / sorun) ve giriş servisinin istek/sn, hata %, p95'i; her servisin altında kendi değerleri, halkası seviye renginde. Bir servis 10 sn "sorun"da kalınca alarm açılıyor; kart kök nedeni ve etkilenen servisleri söylüyor ("payments · etkilenen: orders, gateway"), "kodda gör" Neon şehri o servise yakınlaşmış açıyor. Arıza düğmeleriyle servis yavaşlatılıp çökertilebiliyor; temizlenince alarm kapanıp geçmişe düşüyor. Servis panelinde son 5 dk eğrisi.
+- **Neden önemli:** Operasyon için "sistem iyi mi, ne zamandır, asıl sorun nerede?" sorularının cevabı tek ekranda; Ç2 → Ç1 geçişiyle alarmdan koda iki dokunuş.
+- **Kanıt:** `demo/traffic/index.html`, `demo/services/common/web.py` (arıza), `demo/traffic/server.py` (`/ariza`), `gorseller/2026-10-13-c2-alarm.png`, `gorseller/2026-10-13-c2-kapanan.png`
+- **Sunumda:** 6. Demo; canlıda "payments yavaşlasın" → 10 sn sonra alarm, kök neden payments → temizle → alarm kapanır.
+- **İz:** WBS 6.17, d26
+
 ## 3. Referans projeler
 
 | Proje | ★ / lisans / son (2026-10-11) | Ne aldık | Çıktı |
@@ -205,6 +212,8 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 | `sunum/gorseller/2026-10-13-c1-iz.png` | Ç1: hata paneli, isteğin uçtan uca yolu ve VS Code bağlantısı |
 | `sunum/gorseller/2026-10-13-c1-iliski.png` | Ç1: order_handler.py'nin koddan okunan ilişkileri |
 | `sunum/gorseller/2026-10-13-c1-duzeldi.png` | Ç1: stock.py düzeltildi, bina yeşil, "✓ düzeldi" |
+| `sunum/gorseller/2026-10-13-c2-alarm.png` | Ç2: inventory alarmı, sağlık bandı, servis paneli ve 5 dk eğrisi |
+| `sunum/gorseller/2026-10-13-c2-kapanan.png` | Ç2: arıza temizlendi, kapanan alarm geçmişi |
 | `sunum/gorseller/2026-10-13-c3-takilma-ag.png` | Ç3 ağ: takılma uyarısı ve kampanya ayrıntı paneli |
 | `sunum/gorseller/2026-10-13-c3-takilma-ofis.png` | Ç3 ofis: agent şeridi, takılma uyarısı, turuncu halka |
 | `sunum/gorseller/2026-10-13-c3-canli-oturum.png` | Ç3 canlı: bu Claude Code oturumu ofiste (iç bilgi içerir, ayıklanmadan kullanma) |

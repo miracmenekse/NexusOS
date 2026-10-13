@@ -51,6 +51,9 @@
   @keyframes blink { 50% { opacity:.3; } }
   #log { max-height:210px; overflow:auto; font-size:12px; } #log div { padding:2px 0 2px 8px; border-left:3px solid var(--c); margin:3px 0; }
   .tl { display:flex; align-items:center; gap:10px; padding:0 20px 4px; } .tl input { flex:1; accent-color:#ff7b9c; } .tl span { font:12px ui-monospace,monospace; color:var(--dim); min-width:84px; text-align:right; }
+  #uy { position:absolute; top:10px; right:10px; z-index:6; display:grid; gap:6px; width:min(260px,45%); }
+  .n.stuck .halo { opacity:1; border:3px solid #ffb84d; animation:ring 1s ease-out infinite; } .n.stuck .nm { color:#ffb84d; }
+  .row { cursor:pointer; } .row.sel span:nth-child(2) { text-decoration:underline; } .tool { cursor:pointer; }
   #sonuc { font-size:18px; font-weight:700; } .ok { color:#6ee7a0; } .no { color:#ff7a7a; }
 </style>
 </head>
@@ -64,19 +67,21 @@
 </header>
 <div class="tl"><input type="range" id="tl" min="0" max="1" step="0.1" value="0" aria-label="zaman çizelgesi"><span id="tlt">0:00</span></div>
 <div class="wrap">
-  <div id="st"><svg id="lines" viewBox="0 0 780 560" preserveAspectRatio="none"></svg></div>
+  <div id="st"><div id="uy"></div><svg id="lines" viewBox="0 0 780 560" preserveAspectRatio="none"></svg></div>
   <aside>
-    <div class="box"><h3>AGENT'LAR <span style="font-weight:400">· dokun: ne yapar?</span></h3><div id="ags"></div><div id="rol" style="color:var(--dim);margin-top:6px;font-size:12px"></div></div>
+    <div class="box"><h3>AGENT'LAR <span style="font-weight:400">· dokun: ne yaptı?</span></h3><div id="ags"></div></div>
+    <div class="box" id="ayr" hidden><h3>AYRINTI <span id="kapat" style="float:right;cursor:pointer;font-weight:400">✕</span></h3><div id="panel"></div></div>
     <div class="box"><h3>SONUÇ</h3><div id="sonuc">…</div></div>
     <div class="box"><h3>KONUŞMA</h3><div id="log"></div></div>
   </aside>
 </div>
+<script src="altlik.js"></script>
 <script>
 // agents hand work to each other: a request goes agent -> agent (chains), several run in parallel, results come back one by one.
 // events are timed (t, seconds); a clock fires them, so overlapping work really overlaps.
 // Everything below is derived from the data (altlik.py model): who is where, colours, which tool card belongs to whom.
 const PAL = ["#4fd1ff", "#7ee787", "#c792ea", "#ffab70", "#79c0ff", "#56d4bc", "#e3b341"];
-const SLOT = [[66,16],[80,36],[80,64],[66,84],[42,86],[42,14],[20,86],[20,14],[92,50]];   // ponytail: 9 yer; daha çok agent'ta halka yerleşimi gerekir
+const SLOT = [[66,16],[80,36],[80,64],[66,84],[42,86],[42,14],[20,86],[20,14],[92,50]];   // up to 9 hand-placed slots, then a ring
 const HUBTOOL = [[24,18],[24,82],[58,32],[58,68],[8,18],[8,82]];                          // cards for tools the hub itself uses
 let COL, POS, TOOL, TCOL, ICON, HUB, INSAN;
 function layout(d) {
@@ -87,6 +92,9 @@ function layout(d) {
     else if (x.tur === "ana") { HUB = a; POS[a] = [42, 50]; }
     else POS[a] = SLOT[i++ % SLOT.length];
   }
+  const sub = Object.keys(d.agents).filter(a => d.agents[a].tur === "agent");
+  if (sub.length > SLOT.length) sub.forEach((a, k) => { const w = (k + .5) / sub.length * 2 * Math.PI;   // many agents: a ring around the hub
+    POS[a] = [42 + 40 * Math.cos(w), 50 + 40 * Math.sin(w)]; });
   const n = {};
   for (const e of d.events) if (e.kind === "tool" && !TOOL[e.station]) {   // a card sits outward from the first agent that uses it
     const a = e.agent, [x, y] = POS[a], k = n[a] = (n[a] || 0) + 1;
@@ -100,27 +108,28 @@ const robot = c => `<svg viewBox="0 0 64 64" style="--c:${c}"><line x1="32" y1="
   <circle cx="23" cy="29" r="5" fill="${c}"/><circle cx="41" cy="29" r="5" fill="${c}"/><circle cx="24.5" cy="27.5" r="1.7" fill="#fff"/><circle cx="42.5" cy="27.5" r="1.7" fill="#fff"/>
   <rect x="17" y="48" width="30" height="12" rx="6" fill="#0d1a30" stroke="${c}" stroke-width="2"/></svg>`;
 const pt = (k, tool) => tool ? TOOL[k] : POS[k];
-let D, evs, now, nxt, timer, nodes, tools, bub, links, waiting, docs, quiet = false;   // quiet: seeking, state only, no animation
+let D, evs, now, nxt, timer, nodes, tools, bub, links, waiting, docs, quiet = false, olan = [], sel = null;   // quiet: seeking, state only, no animation
 const sp = () => +$("sp").value;
 
 function build(d) {
   D = d; evs = [...d.events].sort((a, b) => a.t - b.t); $("baslik").textContent = d.title;
   st.querySelectorAll(".n,.tool,.cust,.bub,.pk,.doc").forEach(e => e.remove()); lines.innerHTML = "";
-  nodes = {}; tools = {}; bub = {}; links = {}; waiting = {}; docs = {}; now = 0; nxt = 0; layout(d);
+  nodes = {}; tools = {}; bub = {}; links = {}; waiting = {}; docs = {}; now = 0; nxt = 0; olan = []; layout(d);
   for (const a of INSAN) {
     const c = document.createElement("div"); c.className = "cust"; c.style.cssText = `left:${POS[a][0]}%;top:${POS[a][1]}%`;
     c.innerHTML = `<b>👤</b>${a}<br><span style="color:var(--dim)">${d.agents[a].rol || ""}</span>`; st.append(c); nodes[a] = c;
   }
   for (const a of Object.keys(POS).filter(k => !INSAN.has(k))) {
     const n = document.createElement("div"); n.className = "n" + (a === HUB ? " hub" : " off"); n.style.cssText = `left:${POS[a][0]}%;top:${POS[a][1]}%;--c:${COL[a]}`;
-    n.innerHTML = `<div class="halo"></div>${robot(COL[a])}<div class="nm">${a}</div>`; n.onclick = () => { $("rol").innerHTML = `<b style="color:${COL[a]}">${a}</b>: ${d.agents[a].rol || ""}`; };
+    n.innerHTML = `<div class="halo"></div>${robot(COL[a])}<div class="nm">${a}</div>`; n.onclick = () => sec("ajan", a);
     st.append(n); nodes[a] = n;
   }
   for (const [s, [x, y]] of Object.entries(TOOL)) {
     const t = document.createElement("div"); t.className = "tool"; t.style.cssText = `left:${x}%;top:${y}%;--c:${COL[TCOL[s]]}`;
-    t.innerHTML = `<b>${ICON[s]}</b>${d.stations[s]?.label || s}`; st.append(t); tools[s] = t;
+    t.innerHTML = `<b>${ICON[s]}</b>${d.stations[s]?.label || s}`; t.onclick = () => sec("arac", s); st.append(t); tools[s] = t;
   }
   $("ags").innerHTML = Object.keys(COL).filter(a => !INSAN.has(a)).map(a => `<div class="row" id="r-${a}" style="--c:${COL[a]}"><i></i><span>${a}</span><span>${a === HUB ? "hazır" : "bekliyor"}</span></div>`).join("");
+  for (const r of $("ags").children) r.onclick = () => sec("ajan", r.id.slice(2));
   $("log").innerHTML = ""; $("sonuc").textContent = "…"; $("sonuc").className = "";
 }
 function link(a, b, tool) {   // curve drawn the first time two nodes talk
@@ -148,6 +157,7 @@ function say(a, text, cls) {
 function talk(a) { if (quiet) return; const n = nodes[a]; n.classList.add("talk"); setTimeout(() => n.classList.remove("talk"), 1600 / sp()); }
 function logLine(from, to, text) { const l = document.createElement("div"); l.style.setProperty("--c", COL[from]); l.innerHTML = `<b style="color:${COL[from]}">${from}${to ? " → " + to : ""}</b> ${text}`; $("log").append(l); $("log").scrollTop = 1e5; }
 function fire(e) {
+  olan.push({ e, at: e.t });
   if (e.kind === "msg") {
     const { from: f, to: t } = e;
     packet(f, t, COL[f]); say(f, e.text, e.reply ? "rp" : ""); talk(f); logLine(f, t, e.text);
@@ -168,14 +178,28 @@ function fire(e) {
 }
 function tick() {
   now += 0.1 * sp();
+  if (CANLI) now = Math.min(now, (evs.at(-1)?.t ?? 0) + 1);   // live: wait at the edge for new events
   while (nxt < evs.length && evs[nxt].t <= now) fire(evs[nxt++]);
-  if (nxt >= evs.length) { clearInterval(timer); $("pl").textContent = "▶"; }
-  bar();
+  if (nxt >= evs.length && !CANLI) { clearInterval(timer); $("pl").textContent = "▶"; }
+  bar(); guncelle();
+}
+// detail panel + stuck warnings, recomputed from what has happened so far (altlik.js)
+const renk = a => COL[a] || "#9fb0cc";
+function sec(tur, ad) { sel = sel?.ad === ad ? null : { tur, ad }; guncelle(); }
+$("kapat").onclick = () => { sel = null; guncelle(); };
+$("uy").onclick = e => { const k = e.target.closest("[data-ajan]"); if (k) { sel = { tur: "ajan", ad: k.dataset.ajan }; guncelle(); } };
+function guncelle() {
+  const Dm = Altlik.durum(D, olan), T = Altlik.takilanlar(Dm, now, Altlik.ESIK), uc = new Set(T.map(k => k.uc));
+  for (const [a, n] of Object.entries(nodes)) n.classList.toggle("stuck", uc.has(a));
+  $("uy").innerHTML = Altlik.uyari(T, renk);
+  for (const r of $("ags").children) r.classList.toggle("sel", sel?.ad === r.id.slice(2));
+  $("ayr").hidden = !sel;
+  if (sel) $("panel").innerHTML = sel.tur === "ajan" ? Altlik.ajanPanel(D, Dm, sel.ad, renk, now) : Altlik.aracPanel(D, Dm, sel.ad, renk);
 }
 const mmss = t => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 function bar() { $("tl").value = now; $("tlt").textContent = `${mmss(now)} / ${mmss(+$("tl").max)}`; }
-function seek(t) {   // rebuild, then replay every event up to t without animation: same state as having watched it
-  build(D); quiet = true; while (nxt < evs.length && evs[nxt].t <= t) fire(evs[nxt++]); quiet = false; now = t; bar();
+function seek(t, yeni = D) {   // rebuild, then replay every event up to t without animation: same state as having watched it
+  build(yeni); quiet = true; while (nxt < evs.length && evs[nxt].t <= t) fire(evs[nxt++]); quiet = false; now = t; bar(); guncelle();
 }
 $("tl").oninput = () => { const p = $("pl").textContent === "⏸"; clearInterval(timer); seek(+$("tl").value); p ? play() : ($("pl").textContent = "▶"); };
 function play() { clearInterval(timer); timer = setInterval(tick, 100); $("pl").textContent = "⏸"; }
@@ -185,8 +209,24 @@ $("sp").onchange = () => $("pl").textContent === "⏸" && play();
 $("th").onclick = () => document.documentElement.classList.toggle("light");
 // the other view opens at the same moment: #t<seconds> (a plain hash survives inside the pano too)
 $("diger").onclick = e => { e.currentTarget.href = "ofis2.html" + location.search + "#t" + now.toFixed(1); };
-fetch(new URLSearchParams(location.search).get("data") || "telekom-ag.json").then(r => r.json()).then(d => {
-  $("tl").max = d.events.at(-1).t + 2; build(d); const t0 = +(/^#t([\d.]+)$/.exec(location.hash)?.[1] || 0); if (t0) seek(t0); play(); });
+// ?canli=<url>: a running agent system; the model is re-read every second and new events are appended
+const Q = new URLSearchParams(location.search), CANLI = Q.get("canli");
+const ayniBas = (a, b) => JSON.stringify([Object.keys(a.agents), Object.keys(a.stations)]) === JSON.stringify([Object.keys(b.agents), Object.keys(b.stations)])
+  && a.events.every((e, i) => JSON.stringify(e) === JSON.stringify(b.events[i]));
+async function izle() {
+  const d = await fetch(CANLI, { cache: "no-store" }).then(r => r.json()).catch(() => null);
+  if (d?.events?.length && d.events.length !== D.events.length) {
+    $("tl").max = d.events.at(-1).t + 2;
+    if (ayniBas(D, d)) { D = d; evs.push(...d.events.slice(evs.length)); } else seek(now, d);   // history changed (a sub-agent's log arrived): rebuild at the same moment
+    if (d.events.at(-1).t - now > 8) seek(d.events.at(-1).t - 2);   // fell far behind: jump to the live edge
+  }
+  $("baslik").textContent = D.title + (d ? " · ● canlı" : " · bağlantı yok");
+  setTimeout(izle, 1000);
+}
+fetch(CANLI || Q.get("data") || "telekom-ag.json").then(r => r.json()).then(d => {
+  $("tl").max = (d.events.at(-1)?.t ?? 0) + 2; build(d); const t0 = +(/^#t([\d.]+)$/.exec(location.hash)?.[1] || 0);
+  if (CANLI) { seek(Math.max(0, (d.events.at(-1)?.t ?? 0) - 2)); izle(); } else if (t0) seek(t0);
+  play(); });
 </script>
 </body>
 </html>

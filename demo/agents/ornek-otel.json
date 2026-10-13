@@ -1,0 +1,235 @@
+{
+ "title": "Örnek OpenTelemetry izi · araştırma asistanı (uydurma, dönüştürücü sınaması)",
+ "resourceSpans": [
+  {
+   "scopeSpans": [
+    {
+     "spans": [
+      {
+       "traceId": "0af7651916cd43dd8448eb211c80319c",
+       "spanId": "a1",
+       "parentSpanId": "",
+       "name": "invoke_agent",
+       "startTimeUnixNano": "1791850000000000000",
+       "endTimeUnixNano": "1791850030000000000",
+       "attributes": [
+        {
+         "key": "gen_ai.operation.name",
+         "value": {
+          "stringValue": "invoke_agent"
+         }
+        },
+        {
+         "key": "gen_ai.agent.name",
+         "value": {
+          "stringValue": "planlayıcı"
+         }
+        },
+        {
+         "key": "gen_ai.agent.description",
+         "value": {
+          "stringValue": "Soruyu parçalara böler, işi dağıtır"
+         }
+        },
+        {
+         "key": "nexusos.gorev",
+         "value": {
+          "stringValue": "5G fiyatlarını rakiplerle karşılaştır"
+         }
+        },
+        {
+         "key": "nexusos.sonuc",
+         "value": {
+          "stringValue": "rapor hazır"
+         }
+        }
+       ],
+       "status": {
+        "code": "STATUS_CODE_OK"
+       }
+      },
+      {
+       "traceId": "0af7651916cd43dd8448eb211c80319c",
+       "spanId": "a2",
+       "parentSpanId": "a1",
+       "name": "invoke_agent",
+       "startTimeUnixNano": "1791850002000000000",
+       "endTimeUnixNano": "1791850014000000000",
+       "attributes": [
+        {
+         "key": "gen_ai.operation.name",
+         "value": {
+          "stringValue": "invoke_agent"
+         }
+        },
+        {
+         "key": "gen_ai.agent.name",
+         "value": {
+          "stringValue": "araştırmacı"
+         }
+        },
+        {
+         "key": "gen_ai.agent.description",
+         "value": {
+          "stringValue": "Web'den veri toplar"
+         }
+        },
+        {
+         "key": "nexusos.gorev",
+         "value": {
+          "stringValue": "3 operatörün 5G tarifelerini bul"
+         }
+        },
+        {
+         "key": "nexusos.sonuc",
+         "value": {
+          "stringValue": "12 tarife bulundu"
+         }
+        }
+       ],
+       "status": {
+        "code": "STATUS_CODE_OK"
+       }
+      },
+      {
+       "traceId": "0af7651916cd43dd8448eb211c80319c",
+       "spanId": "t1",
+       "parentSpanId": "a2",
+       "name": "execute_tool",
+       "startTimeUnixNano": "1791850003000000000",
+       "endTimeUnixNano": "1791850006000000000",
+       "attributes": [
+        {
+         "key": "gen_ai.operation.name",
+         "value": {
+          "stringValue": "execute_tool"
+         }
+        },
+        {
+         "key": "gen_ai.tool.name",
+         "value": {
+          "stringValue": "web_arama"
+         }
+        },
+        {
+         "key": "nexusos.ozet",
+         "value": {
+          "stringValue": "web_arama: 5G tarife 2026"
+         }
+        }
+       ],
+       "status": {
+        "code": "STATUS_CODE_OK"
+       }
+      },
+      {
+       "traceId": "0af7651916cd43dd8448eb211c80319c",
+       "spanId": "t2",
+       "parentSpanId": "a2",
+       "name": "execute_tool",
+       "startTimeUnixNano": "1791850007000000000",
+       "endTimeUnixNano": "1791850011000000000",
+       "attributes": [
+        {
+         "key": "gen_ai.operation.name",
+         "value": {
+          "stringValue": "execute_tool"
+         }
+        },
+        {
+         "key": "gen_ai.tool.name",
+         "value": {
+          "stringValue": "sayfa_oku"
+         }
+        },
+        {
+         "key": "nexusos.ozet",
+         "value": {
+          "stringValue": "sayfa_oku: 3 operatör sayfası"
+         }
+        }
+       ],
+       "status": {
+        "code": "STATUS_CODE_OK"
+       }
+      },
+      {
+       "traceId": "0af7651916cd43dd8448eb211c80319c",
+       "spanId": "a3",
+       "parentSpanId": "a1",
+       "name": "invoke_agent",
+       "startTimeUnixNano": "1791850016000000000",
+       "endTimeUnixNano": "1791850027000000000",
+       "attributes": [
+        {
+         "key": "gen_ai.operation.name",
+         "value": {
+          "stringValue": "invoke_agent"
+         }
+        },
+        {
+         "key": "gen_ai.agent.name",
+         "value": {
+          "stringValue": "yazar"
+         }
+        },
+        {
+         "key": "gen_ai.agent.description",
+         "value": {
+          "stringValue": "Bulguları rapora çevirir"
+         }
+        },
+        {
+         "key": "nexusos.gorev",
+         "value": {
+          "stringValue": "Karşılaştırma tablosu yaz"
+         }
+        },
+        {
+         "key": "nexusos.sonuc",
+         "value": {
+          "stringValue": "rapor.md yazıldı"
+         }
+        }
+       ],
+       "status": {
+        "code": "STATUS_CODE_OK"
+       }
+      },
+      {
+       "traceId": "0af7651916cd43dd8448eb211c80319c",
+       "spanId": "t3",
+       "parentSpanId": "a3",
+       "name": "execute_tool",
+       "startTimeUnixNano": "1791850018000000000",
+       "endTimeUnixNano": "1791850024000000000",
+       "attributes": [
+        {
+         "key": "gen_ai.operation.name",
+         "value": {
+          "stringValue": "execute_tool"
+         }
+        },
+        {
+         "key": "gen_ai.tool.name",
+         "value": {
+          "stringValue": "dosya_yaz"
+         }
+        },
+        {
+         "key": "nexusos.ozet",
+         "value": {
+          "stringValue": "dosya_yaz: rapor.md"
+         }
+        }
+       ],
+       "status": {
+        "code": "STATUS_CODE_OK"
+       }
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

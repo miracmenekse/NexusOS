@@ -154,6 +154,13 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - **Sunumda:** 2. Problem, 3. Yön, 5. Çıktılarımız; ilkeler tek slayt.
 - **İz:** WBS 4.2
 
+### 2026-10-13 · Ç3 tamam: geri sarma, takılma, canlı izleme
+- **Ne:** Agent ekibinin dört sorusunun hepsi görünümde cevaplanıyor. Zaman çizelgesiyle herhangi bir ana dönülüyor; agent'a dokununca rolü, durumu, kullandığı araçlar ve yaptıkları listeleniyor; bir bekleme zincirinin ucundaki agent 10 sn sessiz kalınca turuncu halka ve "kampanya 12 sn'dir sessiz · orkestratör → analiz → teklif → kampanya bekliyor" uyarısı çıkıyor. Çalışan bir Claude Code oturumu 1 sn gecikmeyle canlı izleniyor; agent bir servis dosyasını okuyunca Neon şehirde o bina mor parlıyor. Üçüncü kaynak olarak OpenTelemetry GenAI izleri modele çevriliyor.
+- **Neden önemli:** Agent sistemi kuran ekip için "kim kimi bekliyor, nerede takıldı" sorusu kayıt dosyası okumadan cevaplanıyor; OpenTelemetry desteğiyle farklı agent çatıları aynı görünüme bağlanabiliyor. 15 agent / 2.000 olayda 61 fps.
+- **Kanıt:** `demo/agents/altlik.js`, `canli.py`, `test-altlik.js`, `konsept/4.3-kapsam-gereksinim.md` (14/14 gereksinim), `gorseller/2026-10-13-c3-takilma-ag.png`, `gorseller/2026-10-13-c3-takilma-ofis.png`, `gorseller/2026-10-13-c3-canli-oturum.png`
+- **Sunumda:** 5. Çıktılarımız (Ç3) + 6. Demo; canlı gösterimde projeyi yapan agent'ı izlemek (açılış ya da kapanış).
+- **İz:** WBS 6.11, 6.12, 6.13, 6.14, d23
+
 ## 3. Referans projeler
 
 | Proje | ★ / lisans / son (2026-10-11) | Ne aldık | Çıktı |
@@ -188,6 +195,9 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 | `sunum/gorseller/2026-10-12-c3-altlik-ofis-telekom.png` | Ç3 altlığı: sprite ofis, telekom senaryosu |
 | `sunum/gorseller/2026-10-13-c1-neon-koddan.png` | Ç1 Neon şehir: koddan okunan yapı, iki dosya canlı hatada |
 | `sunum/gorseller/2026-10-13-c1-neon-gercek-satir.png` | Ç1 "koda git": hatayı döndüren satır (stock.py:16) işaretli |
+| `sunum/gorseller/2026-10-13-c3-takilma-ag.png` | Ç3 ağ: takılma uyarısı ve kampanya ayrıntı paneli |
+| `sunum/gorseller/2026-10-13-c3-takilma-ofis.png` | Ç3 ofis: agent şeridi, takılma uyarısı, turuncu halka |
+| `sunum/gorseller/2026-10-13-c3-canli-oturum.png` | Ç3 canlı: bu Claude Code oturumu ofiste (iç bilgi içerir, ayıklanmadan kullanma) |
 | `graphify-out/graph.html` | Bilgi grafiği (ekran görüntüsü alınacak) |
 
 ## 6. Dikkat
@@ -196,6 +206,7 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - **ExplorViz frontend** lisansı package.json'da MIT, kökte LICENSE yok; ürünleşmeden önce teyit (risk r8).
 - Şirket Ar-Ge projesi (Rovo) bilgisi sunuma `[gizli]` ayıklanmadan girmez.
 - Ç3 oturum görünümü (`oturum.json`) araç çağrılarında Drive klasör kimliği gibi iç bilgi gösteriyor; sunumdan önce ayıkla.
+- `ornek-otel.json` uydurma bir izdir (dönüştürücü sınaması); gerçek sistem verisi diye sunulmaz.
 - Ç3 demosu oturum kaydındaki kullanıcı mesajlarını ve komut özetlerini gösterir; sunumdan önce oynatılacak oturumu gözden geçir (iç bilgi, kişi adı).
 - **Sprite görselleri** (`demo/agents/px/`): pixel-agents deposu MIT ama görsellerin kökeni (YZ üretimi?) belirsiz; ticari kullanımdan önce netleştirilmeli (r10).
 - Luma/Kling videoları YZ üretimi; "ürün görüntüsü" diye sunulmaz, "esin/konsept" diye sunulur.

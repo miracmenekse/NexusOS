@@ -172,17 +172,34 @@ es.onmessage = m => {
 };
 setInterval(() => {   // repaint: red while failing, calm again after 4 s without errors
   for (const [k, r] of Object.entries(REG)) {
-    const v = FILE[k], bad = v && ago(v) < HOT, col = bad ? r.th.bad : r.th.good;
+    const v = FILE[k], bad = v && ago(v) < HOT, ajan = DOKUN[k]?.until > performance.now(), col = bad ? r.th.bad : ajan ? AJAN : r.th.good;
     r.top.setAttribute("fill", col[0]); r.top._f[0].setAttribute("fill", col[1]); r.top._f[1].setAttribute("fill", col[2]);
     r.top.classList.toggle("pulse", !!bad);
     r.c.setAttribute("visibility", bad ? "visible" : "hidden"); r.t.setAttribute("visibility", v?.fails ? "visible" : "hidden");
     if (v?.fails) r.t.textContent = `${base(k)} · ${v.fails} hata`;
+    if (ajan && !bad) { r.t.setAttribute("visibility", "visible"); r.t.textContent = `✎ ${DOKUN[k].kim}: ${DOKUN[k].ne}`; }
     if (r.src) r.top.classList.toggle("warn", r.src.some(t => ago(EDGE[svcOf(k) + ">" + t]) < HOT));
     if (r.src) for (const p of r.top._f) p.classList.toggle("warn", r.top.classList.contains("warn"));
   }
   for (const [k, c] of Object.entries(CP)) c.bp.setAttribute("stroke", ago(EDGE[k]) < HOT ? c.th.callErr : c.th.call);
   if (A.dataset.f) cap.innerHTML = why(A.dataset.f);
 }, 300);
+
+// ---- agent bridge (G13): when an agent reads or edits a service file (Claude Code, :4500/canli), its building glows
+const DOKUN = {}, AJAN = ["#c792eacc", "#6b3fa0cc", "#8f5cc4cc"], NE = { Read: "okudu", Edit: "düzenledi", Write: "yazdı" };
+let gorulen = -1;
+async function ajanIzle() {
+  const m = await fetch(`${location.protocol}//${location.hostname}:4500/canli/oturum.json`, { cache: "no-store" }).then(r => r.json()).catch(() => null);
+  if (m?.events) {
+    for (const e of gorulen < 0 ? [] : m.events.slice(gorulen)) {   // only what happens after the page opened
+      const x = e.kind === "tool" && /^(Read|Edit|Write): (.+\.py)$/.exec(e.text); if (!x) continue;
+      const k = Object.keys(REG).find(k => base(k) === x[2]); if (k) DOKUN[k] = { until: performance.now() + 6000, kim: e.agent, ne: NE[x[1]] };
+    }
+    gorulen = m.events.length;
+  }
+  setTimeout(ajanIzle, 1500);
+}
+ajanIzle();
 
 // ---- error view: alert when a file starts failing, chip with active count, detail panel with the failing call and the source
 const uy = $a("uy"), chip = $a("chip"), hata = $a("hata"), SRC = {}, HIST = {};

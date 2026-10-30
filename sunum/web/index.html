@@ -1,0 +1,633 @@
+<title>Yazılımın Canlı İkizi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: left rail = table of contents (sticky; top bar on phones); every section is one full-height page, scroll snaps page to page.
+   Deliberately single dark theme (the demos are neon on dark), every color set explicitly. */
+:root {
+  color-scheme: dark;
+  --bg: #0b0e17; --panel: #131827; --line: #252c42; --fg: #e4e8f4; --mute: #8d96b2;
+  --accent: #5fd4ff; --accent-2: #c79bff; --ok: #4fdc9a; --warn: #ffc65c; --bad: #ff6b7d;
+  --f-disp: "Chakra Petch", "Segoe UI", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, monospace;
+  --rail: 232px;
+}
+* { box-sizing: border-box; }
+html { scroll-snap-type: y mandatory; scroll-behavior: smooth; }
+body { background: var(--bg); color: var(--fg); font: 16px/1.6 var(--f-body); margin: 0; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--f-disp); line-height: 1.15; text-wrap: balance; margin: 0; }
+p { max-width: 68ch; margin: 0; }
+.lbl { font: 500 12px/1 var(--f-mono); letter-spacing: .14em; text-transform: uppercase; color: var(--mute); }
+
+/* rail */
+#rail { position: fixed; top: 0; left: 0; bottom: 0; width: var(--rail); border-right: 1px solid var(--line); background: var(--bg);
+  padding: calc(28px + env(safe-area-inset-top, 0px)) 18px 24px; display: flex; flex-direction: column; gap: 22px; z-index: 6; overflow-y: auto; }
+#rail .marka { font: 700 18px/1.2 var(--f-disp); letter-spacing: .04em; }
+#rail .marka small { display: block; font: 400 12px/1.4 var(--f-body); color: var(--mute); letter-spacing: 0; margin-top: 6px; }
+#rail ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+#rail a { display: grid; grid-template-columns: 22px 1fr; gap: 8px; padding: 8px 10px; border-radius: 6px; color: var(--mute); text-decoration: none; font-size: 14px; line-height: 1.3; }
+#rail a span:first-child { font: 500 12px/1.3 var(--f-mono); }
+#rail a:hover { color: var(--fg); background: var(--panel); }
+#rail a[aria-current="true"] { color: var(--fg); background: var(--panel); box-shadow: inset 2px 0 0 var(--accent); }
+#rail a[aria-current="true"] span:first-child { color: var(--accent); }
+#rail .ilerleme { margin-top: auto; font: 12px/1.4 var(--f-mono); color: var(--mute); }
+
+main { margin-left: var(--rail); }
+section.sayfa { min-height: 100vh; scroll-snap-align: start; padding: calc(48px + env(safe-area-inset-top, 0px)) clamp(16px, 4vw, 56px) 48px; border-bottom: 1px solid var(--line);
+  display: flex; flex-direction: column; justify-content: center; }
+section.sayfa > .ic { max-width: 1100px; width: 100%; display: grid; gap: 22px; }
+section.sayfa h2 { font-size: clamp(26px, 3.6vw, 40px); }
+.ipucu { font: 12px/1 var(--f-mono); color: var(--mute); margin-top: 28px; opacity: .8; }
+
+.giris h1 { font-size: clamp(36px, 6vw, 66px); letter-spacing: -.01em; }
+.giris h1 em { font-style: normal; color: var(--accent); text-shadow: 0 0 24px color-mix(in srgb, var(--accent) 45%, transparent); }
+.giris .ozet { font-size: 19px; color: var(--mute); }
+.ikiz-sema { display: grid; grid-template-columns: 1fr auto 1fr auto 1.5fr; gap: 14px; align-items: stretch; }
+.ikiz-sema .sutun { display: grid; gap: 10px; align-content: center; min-width: 0; }
+.ikiz-sema .kutu, .ikiz-sema .gv { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.ikiz-sema b { display: block; font: 600 15px/1.3 var(--f-disp); }
+.ikiz-sema span:not(.lbl) { font-size: 13px; color: var(--mute); line-height: 1.4; }
+.ikiz-sema .ok { align-self: center; font: 500 26px/1 var(--f-mono); color: var(--accent); }
+.ikiz-sema .cekirdek { text-align: center; border: 1px solid var(--accent); border-radius: 12px; padding: 20px 14px; display: grid; gap: 6px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--panel)); box-shadow: 0 0 28px color-mix(in srgb, var(--accent) 22%, transparent); }
+.ikiz-sema .gv { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 12px; align-items: center; padding: 8px; }
+.ikiz-sema .th { height: 70px; overflow: hidden; border-radius: 6px; border: 1px solid var(--line); background: #070910; }
+.ikiz-sema .th img { width: 100%; height: 100%; object-fit: cover; display: block; }
+@media (max-width: 900px) { .ikiz-sema { grid-template-columns: 1fr; } .ikiz-sema .ok { transform: rotate(90deg); justify-self: center; } }
+
+.iki { display: grid; gap: 28px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); align-items: center; }
+.iki > * { min-width: 0; display: grid; gap: 14px; }
+figure { margin: 0; }
+figcaption { font-size: 13px; color: var(--mute); margin-top: 8px; }
+video { width: 100%; border-radius: 10px; border: 1px solid var(--line); background: #000; display: block; }
+.etiket { display: inline-block; font: 500 11px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; padding: 5px 8px; border-radius: 4px;
+  background: color-mix(in srgb, var(--warn) 18%, transparent); color: var(--warn); }
+
+ul.dz { list-style: none; padding: 0; margin: 0; display: grid; gap: 14px; }
+ul.dz li { padding-left: 18px; position: relative; max-width: 68ch; }
+ul.dz li::before { content: ""; position: absolute; left: 0; top: .6em; width: 7px; height: 7px; background: var(--bad); border-radius: 50%; box-shadow: 0 0 10px var(--bad); }
+.tablo { overflow-x: auto; }
+.kitle { width: 100%; border-collapse: collapse; font-size: 15px; }
+.kitle td, .kitle th { text-align: left; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+.kitle th { font: 500 12px/1 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--mute); }
+
+
+/* showcase */
+.sekmeler { display: flex; flex-wrap: wrap; gap: 8px; }
+.sekmeler button { font: 500 14px/1 var(--f-body); color: var(--mute); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px; cursor: pointer; }
+.sekmeler button[aria-selected="true"] { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.sekme-not { font-size: 14px; color: var(--mute); }
+.kartlar { display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); }
+.kart { text-align: left; font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0; cursor: pointer;
+  display: flex; flex-direction: column; overflow: hidden; transition: border-color .15s, transform .15s; }
+.kart:hover { border-color: var(--accent); transform: translateY(-2px); }
+.kart .gor { aspect-ratio: 16/10; background: #070910 center/cover no-repeat; border-bottom: 1px solid var(--line); display: grid; place-items: center; }
+.kart .gor.yazi { font: 600 15px/1.35 var(--f-mono); color: var(--warn); padding: 16px; text-align: center;
+  background: repeating-linear-gradient(135deg, #10131f 0 10px, #0d1019 10px 20px); }
+.kart .gvd { padding: 14px 16px 16px; display: grid; gap: 6px; }
+.kart h3 { font-size: 19px; }
+.kart p { font-size: 14px; color: var(--mute); }
+.kart p.km { color: var(--fg); } .kart p.km b { font: 600 18px/1 var(--f-disp); color: var(--ok); margin-right: 4px; }
+.olcu b.yok { color: var(--mute); }
+.ozet-k { font-size: 18px; } .ozet-k b { color: var(--accent); font: 500 12px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+.alt { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px; }
+.cip { font: 500 11px/1 var(--f-mono); letter-spacing: .08em; padding: 5px 7px; border-radius: 4px; border: 1px solid var(--line); color: var(--mute); }
+.cip.c1 { color: var(--accent); border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.cip.c2 { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, transparent); }
+.cip.c3 { color: var(--accent-2); border-color: color-mix(in srgb, var(--accent-2) 45%, transparent); }
+.cip.ar { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, transparent); }
+.cip.vr { color: #ff9ec7; border-color: color-mix(in srgb, #ff9ec7 45%, transparent); }
+.cip.kapali { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 45%, transparent); }
+.canli { color: var(--ok); }
+.kartlar.biz .kart { border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+
+/* detail dialog */
+dialog { background: var(--panel); color: var(--fg); border: 1px solid var(--line); border-radius: 12px; padding: 0; width: min(1000px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+dialog::backdrop { background: rgb(4 6 12 / .78); }
+.dl { display: grid; gap: 18px; padding: 0 22px 22px; }
+.dl header { position: sticky; top: 0; z-index: 2; background: var(--panel); padding-block: 18px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+.dl header .demolar { flex-basis: 100%; }
+.dl header { display: flex; gap: 12px; align-items: start; }
+.dl header > div:first-child { flex: 1; min-width: 0; display: grid; gap: 6px; justify-items: start; }
+.dl h3 { font-size: 28px; }
+.kapat { font: 500 14px/1 var(--f-body); background: transparent; color: var(--mute); border: 1px solid var(--line); border-radius: 6px; padding: 8px 12px; cursor: pointer; }
+.galeri { display: grid; gap: 8px; }
+.galeri .buyuk { border-radius: 8px; border: 1px solid var(--line); width: 100%; max-height: 52vh; object-fit: contain; display: block; background: #070910; }
+.dl.yon .galeri .buyuk { max-height: 30vh; }
+.galeri .kucuk { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+.galeri .kucuk button { padding: 0; border: 2px solid transparent; border-radius: 6px; background: none; cursor: pointer; flex: 0 0 auto; }
+.galeri .kucuk button[aria-current="true"] { border-color: var(--accent); }
+.galeri .kucuk img { width: 112px; height: 70px; object-fit: cover; border-radius: 4px; display: block; }
+.galeri .alt-yazi { font-size: 13px; color: var(--mute); }
+.alanlar { display: grid; gap: 16px 24px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); margin: 0; }
+.alanlar div { min-width: 0; }
+.alanlar dt { margin-bottom: 5px; }
+.alanlar dd { margin: 0; font-size: 15px; }
+.olcu { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); }
+.olcu div { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; }
+.olcu b { display: block; font: 600 17px/1.25 var(--f-disp); }
+.olcu span { font-size: 12px; color: var(--mute); }
+.haberler { display: grid; gap: 10px; }
+.haberler div { border-left: 2px solid var(--line); padding-left: 12px; }
+.haberler b { display: block; font-size: 15px; }
+.haberler span { font-size: 13px; color: var(--mute); }
+.adim { margin: 0; padding-left: 20px; display: grid; gap: 8px; font-size: 15px; }
+.demolar { display: flex; flex-wrap: wrap; gap: 10px; }
+.demolar button { font: 600 15px/1 var(--f-body); color: var(--bg); background: var(--ok); border: 0; border-radius: 6px; padding: 12px 16px; cursor: pointer; }
+.uyari { font-size: 13px; color: var(--warn); }
+
+#sahne { position: fixed; inset: 0; z-index: 20; background: var(--bg); display: flex; flex-direction: column; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
+#sahne .bar { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+#sahne .bar b { flex: 1; font-family: var(--f-disp); min-width: 0; }
+#sahne .bar .yardim { flex-basis: 100%; font-size: 13px; color: var(--mute); }
+#sahne .alan { flex: 1; position: relative; overflow: hidden; background: #000; }
+#sahne iframe { position: absolute; top: 0; left: 50%; transform: translateX(-50%); border: 0; background: #000; }
+#sahne .yukle { flex: 1; display: grid; place-items: center; color: var(--mute); }
+
+.rovo { border: 1px dashed var(--line); border-radius: 12px; padding: 56px 24px; text-align: center; display: grid; gap: 10px; justify-items: center; }
+.rovo p { color: var(--mute); }
+.adimlar { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+.adimlar div { border-left: 2px solid var(--accent); padding: 4px 0 4px 14px; }
+.adimlar div.yeni { border-color: var(--accent-2); }
+.adimlar b { display: block; }
+.adimlar span { color: var(--mute); font-size: 14px; }
+.kaynakca { font-size: 13px; color: var(--mute); }
+
+@media (max-width: 860px) {
+  html { scroll-snap-type: y proximity; }
+  #rail { position: sticky; width: auto; bottom: auto; flex-direction: row; align-items: center; padding: calc(10px + env(safe-area-inset-top, 0px)) 16px 10px;
+    border-right: 0; border-bottom: 1px solid var(--line); overflow-x: auto; gap: 14px; }
+  #rail .marka small, #rail .ilerleme { display: none; }
+  #rail ol { display: flex; gap: 4px; }
+  #rail a { display: block; white-space: nowrap; padding: 6px 8px; }
+  #rail a span:first-child { display: none; }
+  main { margin-left: 0; }
+  section.sayfa { min-height: auto; padding-block: 48px; }
+}
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .kart { transition: none; } .kart:hover { transform: none; } }
+</style>
+
+<nav id="rail" aria-label="Sunum bölümleri">
+  <div class="marka">NexusOS → Ar-Ge<small>Yazılımın canlı dijital ikizi · Ar-Ge mentör sunumu</small></div>
+  <ol id="icindekiler"></ol>
+  <div class="ilerleme" id="ilerleme"></div>
+</nav>
+
+<main>
+<section class="sayfa giris" id="giris" data-ad="Giriş"><div class="ic">
+  <span class="lbl">Ar-Ge mentör sunumu · Ekim 2026</span>
+  <h1>Yazılımın <em>canlı dijital ikizi</em></h1>
+  <p class="ozet">Bir yazılım sistemini (kodunu, servisleri arasındaki trafiği ve içinde çalışan yapay zekâ agent'larını) canlı bir dijital ikiz olarak gösteren, az tuşla, dokunarak kullanılan bir arayüz. VR gözlüğü gerekmez; tarayıcıda çalışır.</p>
+  <figure class="ikiz-sema" aria-label="NexusOS nasıl çalışır: üç gerçek kaynak, tek veri modeli, üç canlı görünüm">
+    <div class="sutun"><span class="lbl">Gerçek kaynaklar</span>
+      <div class="kutu"><b>Kod</b><span>Python ast ile okunur</span></div>
+      <div class="kutu"><b>Servis trafiği</b><span>çağrı, hata, gecikme</span></div>
+      <div class="kutu"><b>Agent oturumları</b><span>kim kime iş verdi, nerede takıldı</span></div></div>
+    <div class="ok" aria-hidden="true">→</div>
+    <div class="sutun"><span class="lbl">Ortak model</span>
+      <div class="cekirdek"><b>Tek veri modeli</b><span>Yeni kaynak = bir dönüştürücü</span><span>Yeni görünüm = bir sayfa</span></div></div>
+    <div class="ok" aria-hidden="true">→</div>
+    <div class="sutun"><span class="lbl">Canlı ikiz · üç görünüm</span>
+      <div class="gv"><div class="th"><img src="img/c1-neon-koddan.png" alt="" style="transform: scale(1.7); transform-origin: 50% 62%"></div><div><b>Kod şehri</b><span>Geliştirici: hata hangi dosyada, hangi satırda?</span></div></div>
+      <div class="gv"><div class="th"><img src="img/c2-alarm.png" alt=""></div><div><b>Servis trafiği</b><span>Operasyon: sistem sağlıklı mı, hangi servis yavaş?</span></div></div>
+      <div class="gv"><div class="th"><img src="img/c3-takilma-ag.png" alt=""></div><div><b>Yaşayan agent'lar</b><span>Yönetici: sistem ne yapıyor, kim bekliyor?</span></div></div></div>
+  </figure>
+  <p class="ipucu">↓ Aşağı kaydırın ya da soldaki bölümlere tıklayın</p>
+</div></section>
+
+<section class="sayfa" id="kivilcim" data-ad="Kıvılcım"><div class="ic">
+  <span class="lbl">1 · Kıvılcım</span>
+  <h2>NexusOS: "VR'da yazılım geliştirme" fikri</h2>
+  <div class="iki">
+    <div>
+      <p>NexusOS, Metaverse dersinde doğdu ve TÜBİTAK 1002-A başvurusu olarak yazıldı: geliştiricinin kodu VR'da bir mekân gibi gezdiği bir ortam.</p>
+      <p>Drive, NotebookLM, Manus ve video kaynaklarını topladık; 28 dosyadan 176 düğümlü bir bilgi grafiği çıktı, 96 literatür kaynağı tarandı.</p>
+      <p>Esin videosundaki akış hedefimizi tarif ediyor: kırmızı modül → dokun → analiz paneli → "Go to Error" → onarım. Hiç tuşa basılmıyor.</p>
+    </div>
+    <figure>
+      <video controls preload="metadata" poster="medya/luma-poster.jpg" playsinline aria-label="NexusOS esin videosu"><source src="medya/luma.mp4" type="video/mp4"></video>
+      <figcaption><span class="etiket">Esin / konsept</span> YZ ile üretilmiş video (Luma); ürün görüntüsü değildir. Oynatmak için tıklayın.</figcaption>
+    </figure>
+  </div>
+</div></section>
+
+<section class="sayfa" id="problem" data-ad="Problem"><div class="ic">
+  <span class="lbl">2 · Problem</span>
+  <h2>Yazılım görünmez</h2>
+  <ul class="dz">
+    <li>Dağıtık bir sistemde "sorun nerede?" sorusunun cevabı log, metrik ve kod arasında dağınık. Geliştirici ekranlar arasında bağlamı kaybediyor.</li>
+    <li>Agent sistemlerinde iş görünmez: hangi agent kime iş verdi, hangi aracı kullandı, nerede takıldı; ancak kayıt dosyası okunarak anlaşılıyor.</li>
+    <li>Mevcut araçlar ya statik kod haritası, ya düğüm-kenar agent grafiği, ya da fiziksel tesis ikizi. Yazılımın canlı ikizi neredeyse yok.</li>
+  </ul>
+  <div class="tablo"><table class="kitle">
+    <thead><tr><th>Kullanıcı</th><th>Sorusu</th><th>Çıktı</th></tr></thead>
+    <tbody>
+      <tr><td>Agent sistemi kuran ekip</td><td>Agent'lar işi nasıl bölüşüyor, nerede bekliyor, sonuç ne?</td><td>Ç3</td></tr>
+      <tr><td>Geliştirici</td><td>Hata hangi dosyada, hangi satırda, kim çağırıyor?</td><td>Ç1</td></tr>
+      <tr><td>Operasyon / SRE</td><td>Sistem şu an sağlıklı mı, hangi servis yavaş ya da hatalı?</td><td>Ç2</td></tr>
+      <tr><td>Yönetici / müşteri</td><td>Sistem ne yapıyor?</td><td>Ç3 (telekom senaryosu)</td></tr>
+    </tbody>
+  </table></div>
+</div></section>
+
+<section class="sayfa" id="yon" data-ad="Yön"><div class="ic">
+  <span class="lbl">3 · Yön</span>
+  <h2>Yazılımı herkesin okuyabildiği sekiz yetenek</h2>
+    <p>VR gözlüğü benimsemeyi zorlaştırıyordu: donanım, kurulum, eğitim. Yönü değiştirdik: tarayıcıda çalışan, gözlüksüz, klavyesiz bir canlı ikiz. Her yetenek bir iş sorusunu cevaplar: sorun ne zaman ve nerede, kim görüyor, kaç adımda çözülüyor. Bir karta tıklayın; nasıl çalıştığı ve nereden esinlendiğimiz yazılı.</p>
+    <div class="kartlar biz" id="yon-kartlar"></div>
+</div></section>
+
+<section class="sayfa" id="dunya" data-ad="Dünyada ne var"><div class="ic">
+  <span class="lbl">4 · Dünyada ne var</span>
+  <h2>Araştırmalar ve çözümler</h2>
+  <p>Yaklaşık 20 aracı ve 96 literatür kaynağını taradık. Üç ayrı görsel dil var: kod mekânı, akan trafik, yaşayan agent'lar. Üçünü gerçek veriden birlikte çizen bir yazılım ikizi yok. Bir sekme seçin, karta tıklayın.</p>
+  <div class="sekmeler" role="tablist" aria-label="Çözüm türü" id="sekmeler"></div>
+  <p class="sekme-not" id="sekme-not"></p>
+  <div class="kartlar" id="dunya-kartlar"></div>
+</div></section>
+
+<section class="sayfa" id="biz" data-ad="Bizim çözümlerimiz"><div class="ic">
+  <span class="lbl">5 · Bizim çözümlerimiz</span>
+  <h2>Üç çıktı, üç canlı demo</h2>
+  <p>Hepsi aynı örnek sistemden besleniyor: 4 mikroservis (gateway, orders, inventory, payments), 11 dosya. Demolar bu sayfanın içinde, tarayıcıda simüle edilen servislerle çalışır; kurulum gerekmez. Karta tıklayın: nasıl kullanılacağı yazılı, "▶" ile açılır, Esc ya da "Kapat" ile döner.</p>
+  <div class="kartlar biz" id="biz-kartlar"></div>
+</div></section>
+
+<section class="sayfa" id="arge" data-ad="Şirket Ar-Ge projesi"><div class="ic">
+  <span class="lbl">6 · Şirket Ar-Ge projesi</span>
+  <h2>Şirket Ar-Ge projesiyle eşleme</h2>
+  <div class="rovo"><span class="etiket">Yapılacak</span><p><b>Burası sonradan yapılacaktır.</b></p><p>Hangi epik ve hedeflere bağlanacağı, şirket projesi bilgileri eklendikten sonra yazılacak.</p></div>
+</div></section>
+
+<section class="sayfa" id="sonra" data-ad="Sonraki adımlar"><div class="ic">
+  <span class="lbl">7 · Sonraki adımlar</span>
+  <h2>Sırada ne var</h2>
+  <div class="adimlar">
+    <div class="yeni"><b>Konuşarak hata çözme demosu</b><span>Conversational AI + DBeaver + kod görselleştirme: hatayı konuşarak sor, veritabanı ve kod şehrinde birlikte izle, çöz.</span></div>
+    <div><b>Kullanıcı testi</b><span>5 + 5 kişi; aynı görevler log + editörle ve ikizle. Görev süresi, hata, SUS (hedef > 68), NASA-TLX.</span></div>
+    <div><b>Ses + dokunma katmanı</b><span>"Ses fiil, dokunma nesne". Özgünlüğün üçüncü ayağı buna bağlı.</span></div>
+    <div><b>Ç1 ile Ç3 aynı sahnede</b><span>Agent'ın dokunduğu dosya şehirde parlar; tek model ilkesi buna izin veriyor.</span></div>
+    <div><b>Şirket projesine bağlanma</b><span>6. bölümdeki eşleme.</span></div>
+    <div><b>Lisans ve ölçek</b><span>ExplorViz ve sprite görsellerinin lisans teyidi; 4 servisten yüzlerce servise ölçek sınırları.</span></div>
+  </div>
+  <p class="kaynakca">Kaynaklar: referans taraması, konsept taslağı (WBS 4.2), proje kayıtları, arXiv özetleri. Yıldız sayıları 2026-10-11 tarihli. Demo verileri örnek sistemden ve kurgusal telekom senaryosundan gelir.</p>
+</div></section>
+</main>
+
+<dialog id="detay" aria-labelledby="d-ad"><div class="dl" id="d-ic"></div></dialog>
+<div id="sahne" hidden></div>
+
+<script>
+const R = "img/referans/";
+const SEKME = { c1: "Kod mekânı", c2: "Servis trafiği", c3: "Agent'lar", ar: "Araştırmalar", vr: "VR çalışma alanları" };
+const SEKME_NOT = {
+  c1: "Kodu mekân olarak gösteren araçlar. Ç1 Neon kod şehrimizin karşılaştırma noktası.",
+  c2: "Servisler arası canlı trafiği gösteren araçlar. Ç2'nin karşılaştırma noktası.",
+  c3: "Agent'ların işini görünür kılan araçlar. Ç3'ün karşılaştırma noktası.",
+  ar: "Akademik çalışmalar: amacı, literatüre katkısı, çıktısı, performansı ve kullandığı teknoloji.",
+  vr: "NexusOS'un ilk yönündeki VR çalışma alanları ve bulut IDE'ler (Manus pazar taraması). Fon, pazar ve haber satırları Manus derlemesidir, doğrulanmamıştır.",
+};
+
+const DUNYA = [
+  { g: "c1", ad: "ExplorViz", kim: "Kiel Üniversitesi · açık kaynak", cumle: "Web'de 3B kod şehri ve servisler arası canlı çağrı okları.",
+    kitle: "Yazılım mimarları, araştırmacılar", cozum: "Çalışan sistemin izlerinden (OpenTelemetry) şehir ve iletişim görünümü üretir.",
+    aldik: "Başlangıç altlığımızdı: kendi 4 servisimizi onda şehre çevirdik. Sonra daha hafif kendi görünümümüze geçtik.",
+    kaynak: "★ 6 · lisans MIT? (teyit edilecek)", url: "https://github.com/ExplorViz/frontend",
+    img: [["img/explorviz-sehir.png", "Bizim 4 servisimiz ExplorViz'de: servisler arası çağrı yayları"], [R + "explorviz-mimari.png", "ExplorViz mimarisi (proje sitesinden)"]] },
+  { g: "c1", ad: "CodeCharta", kim: "MaibornWolff", cumle: "Kod metriklerini 3B şehir haritasına çevirir.",
+    kitle: "Geliştirme ekipleri, teknik yöneticiler", cozum: "Dosya boyutu, karmaşıklık, değişim sıklığı gibi metrikleri bina boyu ve rengiyle gösterir; görünümler arası geçiş.",
+    aldik: "Metrik şehir ve Domain (kelime bulutu) görünümü fikri.", kaynak: "★ 546 · BSD-3 · aktif", url: "https://github.com/MaibornWolff/codecharta",
+    img: [[R + "codecharta-metric.png", "Metrik şehir"], [R + "codecharta-domain.png", "Domain görünümü"]] },
+  { g: "c1", ad: "SEE", kim: "Bremen Üniversitesi", cumle: "Çok kullanıcılı, avatarlı kod mekânı.",
+    kitle: "Dağıtık geliştirme ekipleri", cozum: "Kod şehrinde birden fazla kişi avatarla buluşup birlikte inceleme yapar; masaüstü ve VR.",
+    aldik: "Metaverse fikrine en yakın örnek; ortak oturum ilk sürümde kapsam dışı.", kaynak: "★ 29 · MIT · aktif", url: "https://github.com/uni-bremen-agst/SEE",
+    img: [[R + "see.png", "SEE kod şehri"]] },
+  { g: "c2", ad: "Vizceral", kim: "Netflix", cumle: "Servisler arasında akan trafiği parçacıklarla gösterir.",
+    kitle: "Operasyon / SRE ekipleri", cozum: "Bölge ve servis düzeyinde trafik hacmi ve hata oranı; hata kırmızı, içine dalınabilir.",
+    aldik: "Akan parçacık, hata rengi ve içine dalma; Ç2'nin görsel dili.", kaynak: "★ 4.099 · Apache-2.0 · 2023'ten beri güncellenmiyor", url: "https://github.com/Netflix/vizceral",
+    img: [[R + "vizceral.png", "Vizceral trafik görünümü"]] },
+  { g: "c3", ad: "AI Town", kim: "a16z", cumle: "LLM karakterlerin yaşadığı, konuştuğu bir kasaba.",
+    kitle: "Agent geliştiricileri, araştırmacılar", cozum: "Karakterler yan yana gelince konuşur; konuşma balonu ve geçmiş.",
+    aldik: "Konuşma balonu ve kasaba metaforu.", kaynak: "★ 10.616 · MIT", url: "https://github.com/a16z-infra/ai-town",
+    img: [[R + "ai-town.png", "AI Town kasabası"]] },
+  { g: "c3", ad: "agent-flow", kim: "açık kaynak", cumle: "Agent'ın düşünme, dallanma ve araç çağrılarını canlı grafik olarak gösterir.",
+    kitle: "Agent geliştiricileri", cozum: "Fütüristik düğüm grafiği ve zaman çizelgesi; çalışan agent'ı canlı izler.",
+    aldik: "Ağ görünümümüzdeki durum halkası, nabız ve zaman çizelgesi.", kaynak: "★ 1.694 · Apache-2.0 · aktif", url: "https://github.com/patoles/agent-flow",
+    img: [[R + "agent-flow.png", "agent-flow grafiği"]] },
+  { g: "c3", ad: "Pixel Agents", kim: "açık kaynak", cumle: "Claude Code agent'ları piksel bir ofiste çalışır.",
+    kitle: "Claude Code kullanıcıları", cozum: "Agent'ın kayıt dosyasını okuyup karakterleri ofiste masalara ve araçlara yürütür.",
+    aldik: "Sprite ofis görünümümüz bu deponun görselleriyle çiziliyor.", kaynak: "★ 9.643 · MIT · aktif", url: "https://github.com/pixel-agents-hq/pixel-agents",
+    img: [[R + "pixel-agents.png", "Pixel Agents ofisi"]] },
+  { g: "c3", ad: "deskrpg", kim: "açık kaynak", cumle: "Agent'ların masada çalıştığı 3B ofis.",
+    kitle: "Agent ekipleri", cozum: "Toplantı modu, kanban, zamanlanmış işler; agent'lar ofiste dolaşır ve rapor verir.",
+    aldik: "Yalnız esin.", kaynak: "★ 166 · Sustainable Use License", url: "https://github.com/dandacompany/deskrpg",
+    uyari: "Lisans ticari kullanıma izin vermiyor; yalnız esin ve iç demo.", img: [[R + "deskrpg.png", "deskrpg ofisi"]] },
+
+  // research: aim, contribution, output, performance, technology (from the papers' abstracts; DuoZone figures from our NotebookLM analysis)
+  { g: "ar", ad: "SecCityVR", kim: "Wüppelman & Yigitbas · 2025", etk: "c1", cumle: "Güvenlik açıklarını VR kod şehrinde birlikte inceleme.",
+    amac: "Statik güvenlik analizi (SAST) sonuçlarını 2B panolar yerine mekânsal ve ortak incelenebilir hâle getirmek.",
+    katki: "Yazarlara göre güvenlik açıklarını VR'da görselleştiren ilk yaklaşım: açıklar kod şehrinde renkli bina katları, uygulamanın çağrı grafiğiyle bağlama oturtuluyor.",
+    cikti: "Çok kullanıcılı VR prototipi; tespit edilen her sorun için açıklama ve çözüm önerisi.",
+    perf: "17 katılımcı, find-sec-bugs panosuna karşı: SUS 70'e 58,75; zaman baskısı (TLX) 10'a 42,5; hayal kırıklığı 17,5'e 52,5 (anlamlı). Görev süresi VR'da anlamlı biçimde daha uzun.",
+    tek: "VR, kod şehri metaforu, çağrı grafiği, find-sec-bugs (SAST).",
+    bize: "Şehir + çağrı grafiği birleşimi Ç1'de var. Uyarısı: tüm yaylar birden açılınca görsel kirlilik; bizde yaylar istenince açılıyor.",
+    kaynak: "arXiv:2504.18238", url: "https://arxiv.org/abs/2504.18238" },
+  { g: "ar", ad: "DuoZone", kim: "Qian vd. (NYU) · 2025", etk: "c3", cumle: "LLM destekli, karma inisiyatifli XR pencere yönetimi.",
+    amac: "XR'da çok sayıda pencereyi elle yerleştirmenin yarattığı bilişsel ve etkileşim yükünü azaltmak.",
+    katki: "İki bölgeli karma inisiyatif: Öneri Bölgesi (ses/metinle hedef söylenir, LLM düzen ve uygulama önerir) + Düzenleme Bölgesi (sürükle, boyutlandır, yapıştır ile ince ayar).",
+    cikti: "Çalışan XR pencere yöneticisi ve karma inisiyatifli sistemler için tasarım ilkeleri.",
+    perf: "16 uzman, özne-içi düzen, elle yerleştirmeye karşı: görevler %34,5 daha hızlı; zihinsel yük anlamlı düşük; kullanıcılar uygulama önerilerinin %90'ından fazlasını, düzen önerilerinin %82,8'ini kabul etti.",
+    tek: "Apple Vision Pro, Unity PolySpatial, yerel sunucuda LLM (RTX 4050), sesli komut.",
+    bize: "Ölçüm yöntemimizin (NASA-TLX, özne-içi karşılaştırma) ve \"görüşü kapatma\" ilkemizin dayanağı.",
+    kaynak: "arXiv:2511.15676", url: "https://arxiv.org/abs/2511.15676" },
+  { g: "ar", ad: "Dokunma mı, ses mi, ikisi mi?", kim: "Saktheeswaran, Srinivasan, Stasko · 2020", etk: "c3", cumle: "Ağ görselleştirmede ses ve dokunmanın birlikte kullanımı.",
+    amac: "Kullanıcılar ağ verisini keşfederken çok kipli girdiyi (ses + dokunma) tek kipliye tercih ediyor mu, neden?",
+    katki: "Ses, dokunma ve ikisinin birleşimini aynı araçta karşılaştıran nitel çalışma; çok kipli ağ görselleştirme için etkileşim kalıpları ve tasarım temaları.",
+    cikti: "Orko görselleştirme aracı üzerinde üç arayüz koşulu ve gözlenen etkileşim kalıpları.",
+    perf: "Katılımcılar çok kipli girdiyi güçlü biçimde tercih etti; nedenler: ifade özgürlüğü, ses ve dokunmanın birbirini tamamlaması, birleşik etkileşim.",
+    tek: "Dokunmatik ekran, konuşma tanıma, ağ görselleştirme (Orko).",
+    bize: "\"Ses fiil, dokunma nesne\" ilkemizin dayanağı.",
+    kaynak: "arXiv:2004.14505 (IEEE VIS 2020)", url: "https://arxiv.org/abs/2004.14505" },
+  { g: "ar", ad: "Hey Dashboard!", kim: "Dhanoa vd. · 2025", etk: "c2", cumle: "Panoyu ses, metin ve işaretleyerek öğrenmek.",
+    amac: "Karmaşık panoları öğrenmek için gereken emek yoğun tanıtım oturumlarını LLM ile kendi kendine yapılır kılmak.",
+    katki: "DIANA: açıklamaları sohbet penceresinde değil, doğrudan panonun üzerinde vurgulayarak veren çok kipli LLM asistanı.",
+    cikti: "Ses, metin ve fare ile işaretlemeyi birleştiren tanıtım asistanı.",
+    perf: "Nitel kullanıcı çalışması: farklı görev türleri ve karmaşıklıklarda hangi kipin tercih edildiği.",
+    tek: "LLM, konuşma tanıma, görselleştirme panosu.",
+    bize: "Ç2'de alarm kartının açıklamayı doğrudan sahnede vermesi; ileride sesli \"bu neden kırmızı?\" sorusu.",
+    kaynak: "arXiv:2510.12386", url: "https://arxiv.org/abs/2510.12386" },
+  { g: "ar", ad: "CodeCity", kim: "Wettel & Lanza · 2008–2011", etk: "c1", cumle: "Kod şehri metaforunun öncüsü.",
+    amac: "Büyük kod tabanlarını bir bakışta okunur kılmak.",
+    katki: "Şehir metaforu: sınıf = bina, paket = mahalle; metrikler bina boyutuna eşleniyor.",
+    cikti: "CodeCity aracı ve kontrollü deney.",
+    perf: "41 katılımcılı kontrollü deney (4 yer, 3 ülke): Eclipse + Excel'e göre %24 daha doğru, %12 daha hızlı; büyük sistemde %30 daha doğru.",
+    tek: "Smalltalk / Moose analiz platformu, FAMIX modeli.",
+    bize: "Ç1'de servis = ada, dosya = bina, yükseklik = satır sayısı.",
+    kaynak: "ICSE 2011", url: "https://wettel.github.io/download/Wettel11a-icse.pdf" },
+];
+
+const BIZ = [
+  { g: "c1", ad: "Neon kod şehri", kim: "Ç1 · Geliştirici için", cumle: "Kodun dijital ikizi: hata hangi dosyada, hangi satırda?",
+    kitle: "Geliştirici", cozum: "Kod Python ast ile okunur: servis = ada, dosya = bina, yükseklik = satır, yay = koddaki çağrı. Hata veren dosya kendiliğinden kırmızı; dokun → gruba yakınlaş → \"koda git\" hatayı döndüren satırı işaretler. İsteğin yolunu izler, kod değişince şehir yeniden çizilir.",
+    fark: "Statik metrik haritası değil, canlı: veri koddan ve gerçek çağrılardan geliyor. İki dokunuşta satıra.",
+    nasil: ["Kırmızı binaya ya da sağ üstteki kırmızı karta dokunun: isteğin yolu ve hatalı satır açılır.", "Bir servise dokunun, sonra içindeki bir binaya: dosya ilişkileri görünür.", "\"Koda git\" hatayı döndüren satırı kod panelinde işaretler."],
+    img: [["img/c1-neon-koddan.png", "Şehir koddan üretiliyor"], ["img/c1-neon-gercek-satir.png", "Koda git: hatayı döndüren satır"], ["img/c1-iz.png", "İsteğin servisler arası yolu"], ["img/c1-iliski.png", "Dosya ilişkileri"], ["img/c1-duzeldi.png", "Düzeltilen dosya yeşile döner (yerel kurulumda)"]],
+    demo: [["demo/sehir.html", "Canlı aç"]] },
+  { g: "c2", ad: "Servis trafiği", kim: "Ç2 · Operasyon için", cumle: "Sistem şu an sağlıklı mı, sorun nereden başladı?",
+    kitle: "Operasyon / SRE", cozum: "Servisler ve bağlantıları koddan gelir; çağrılar akan ışık. Üst bantta sistem durumu, istek/sn, hata %, p95. Bir servis 10 sn sorunda kalınca alarm açılır; kart kök nedeni ve etkilenen servisleri söyler.",
+    fark: "Grafik panosu yerine akış: kök neden ve etki tek bakışta; \"kodda gör\" Ç1'e geçer.",
+    nasil: ["Sol altta \"payments yavaşlasın\" düğmesine basın.", "Yaklaşık 10 sn sonra alarm açılır: kök neden payments, etkilenen servisler listelenir.", "\"Kodda gör\" ile Ç1'e geçin; \"temizle\" ile arızayı kaldırın."],
+    img: [["img/c2-alarm.png", "Alarm: kök neden ve etkilenen servisler"], ["img/c2-kapanan.png", "Kapanan alarm"], ["img/c2-trafik.png", "İlk sürüm: akan trafik"]],
+    demo: [["demo/trafik.html", "Canlı aç"]] },
+  { g: "c3", ad: "Yaşayan agent'lar", kim: "Ç3 · Agent ekibi için · ana çıktı", cumle: "Agent'lar ne yapıyor, kime iş veriyor, nerede takıldı?",
+    kitle: "Agent sistemi kuran ekip, yönetici / müşteri", cozum: "Ortak bir agent olay modeli (altlık): senaryo, Claude Code oturumu ya da OpenTelemetry GenAI izi aynı biçime çevrilir. Aynı veri farklı görünümlerle oynatılır: sprite ofis ve ağ grafiği. Geri sarma, takılma tespiti, canlı izleme. Örnek: 6 agent bir telekom abonesini elde tutmaya çalışıyor.",
+    fark: "Tek model, çok görünüm: yeni kaynak = bir dönüştürücü, yeni görünüm = bir sayfa.",
+    nasil: ["Bir agent'a dokunun: ne yaptığı görünür.", "Zaman çizelgesini sürükleyin; \"ağ görünümü\" bağlantısı aynı anı diğer görünümde açar.", "Takılma senaryosu: ~0:30 civarında turuncu \"… sn'dir sessiz\" uyarısı çıkar.", "Kayıp senaryosu: sonuç \"kaybedildi\" ile biter."],
+    img: [["img/c3-telekom.png", "Telekom satış senaryosu"], ["img/c3-takilma-ofis.png", "Takılan agent: ofis görünümü"], ["img/c3-takilma-ag.png", "Takılan agent: ağ görünümü"]],
+    demo: [["demo/ofis2.html?data=telekom-ag.json", "Ofis görünümü"], ["demo/ag.html?data=telekom-ag.json", "Ağ görünümü"], ["demo/ag.html?data=telekom-takilma.json", "Takılma senaryosu"], ["demo/ofis2.html?data=telekom-kayip.json", "Kayıp senaryosu"]],
+    uyari: "Senaryo kurgusaldır; müşteri verisi içermez." },
+  { g: "c3", ad: "Bayi satış asistanı", kim: "Ç3 · Telekom bayisi senaryosu", cumle: "Bayide müşteri temsilcisinin yanında çalışan agent ekibi.",
+    kitle: "Bayi müşteri temsilcisi, satış yöneticisi", cozum: "EtiyaCell bayisinde temsilci müşteriyle konuşurken CRM, kredi ve kampanya agent'ları arka planda çalışıyor; kimin ne yaptığı ofis sahnesinde ve konuşma akışında görünüyor.",
+    fark: "Aynı agent altlığı, müşteriye dönük bir iş senaryosunda: telekom müşterisine doğrudan anlatılabilir.",
+    nasil: ["Oynat: temsilci, müşteri ve agent'lar sahnede konuşur.", "Sağdaki akışta her adımın hangi agent'tan geldiği görünür.", "Bir karaktere dokunun: rolü ve son işi.", "Modern görünüm: üstteki aşamalara tıklayıp atlayın; boşluk tuşu oynat/duraklat, ←/→ bölüm değiştirir."],
+    demo: [["demo/bayi.html", "Mağaza sahnesi"], ["demo/bayi2.html", "Modern görünüm"]], uyari: "Senaryo kurgusaldır; müşteri verisi içermez." },
+];
+
+
+// Short "what it solves" + measured results (primary sources; "—" = no published measurement).
+const OZET = {
+  "ExplorViz": ["Çalışan bir sistemin hangi parçası kiminle konuşuyor, sorunu nerede: canlı izlerden 3B şehir.",
+    [["%39–61", "daha doğru cevap"], ["%28", "daha az süre (büyük sistemde)"]], "Fittkau vd., ICPC 2015: Extravis'e karşı iki kontrollü deney"],
+  "CodeCharta": ["Kodun riskli yerlerini (karmaşık, sık değişen, testsiz) teknik olmayan biri de bir bakışta görsün.",
+    [["—", "yayımlanmış ölçüm yok"]], "Yalnız vaka örnekleri (Deutsche Bahn, 3 yılda kırmızıdan yeşile); bağımsız ölçüm yok"],
+  "SEE": ["Dağıtık ekip aynı kod şehrinde buluşup birlikte incelesin.",
+    [["34", "katılımcılı kontrollü deney"], ["genel bakış", "kod şehri tablodan iyi"]], "Koschke & Steinbeck, VISSOFT 2022: kod kokusunda şehir hızlı genel bakış, tablo ayrıntı için iyi"],
+  "Vizceral": ["Trafik başka bölgeye aktarılırken \"sistem hazır mı?\" sorusuna gecikmesiz, tek bakışta cevap.",
+    [["—", "yayımlanmış ölçüm yok"]], "Netflix bölgesel failover'da kullandı; ölçüm yayımlamadı. Proje artık bakımsız"],
+  "AI Town": ["LLM agent'larının birbirleriyle nasıl konuştuğunu ve ilişki kurduğunu izlenebilir kılmak.",
+    [["%1,3", "halüsinasyon (453 durumda 6)"], ["0,17 → 0,74", "sosyal ağ yoğunluğu"]], "Esin aldığı makale: Park vd., Generative Agents, UIST 2023 (25 agent, 100 katılımcı)"],
+  "agent-flow": ["Agent'ın düşünme, dallanma ve araç çağrılarını canlı izlemek.", [["—", "yayımlanmış ölçüm yok"]], "Açık kaynak araç; değerlendirme yok"],
+  "Pixel Agents": ["Claude Code agent'larının ne yaptığını eğlenceli, sezgisel bir ofis sahnesiyle göstermek.", [["—", "yayımlanmış ölçüm yok"]], "Açık kaynak araç; değerlendirme yok"],
+  "deskrpg": ["Agent ekibinin işlerini ofis, toplantı ve kanban metaforuyla yönetmek.", [["—", "yayımlanmış ölçüm yok"]], "Açık kaynak araç; değerlendirme yok"],
+  "SecCityVR": ["Güvenlik açıklarını tablo yerine kod şehrinde, ekipçe ve bağlamıyla incelemek.",
+    [["70 / 58,75", "SUS (VR / pano)"], ["17,5 / 52,5", "hayal kırıklığı, TLX (anlamlı)"], ["daha uzun", "görev süresi (anlamlı)"]], "arXiv:2504.18238, 17 katılımcı, find-sec-bugs panosuna karşı"],
+  "DuoZone": ["XR'da pencereleri tek tek yerleştirme yükünü LLM önerisiyle kaldırmak.",
+    [["%34,5", "daha hızlı"], ["%90+", "uygulama önerisi kabulü"], ["%82,8", "düzen önerisi kabulü"]], "arXiv:2511.15676, 16 uzman, elle düzenlemeye karşı; zihinsel yük de anlamlı düşük"],
+  "Dokunma mı, ses mi, ikisi mi?": ["Ağ verisini keşfederken ses ve dokunmanın birlikte kullanılması tercih ediliyor mu?",
+    [["nitel", "katılımcıların çoğu ses + dokunmayı tercih etti"]], "arXiv:2004.14505, nitel kullanıcı çalışması"],
+  "Hey Dashboard!": ["Karmaşık bir panoyu öğrenmeyi, açıklamayı panonun üstünde veren bir asistanla kolaylaştırmak.",
+    [["nitel", "kip tercihi görev türüne göre değişiyor"]], "arXiv:2510.12386, nitel kullanıcı çalışması"],
+  "CodeCity": ["Büyük bir kod tabanını şehir gibi okuyup mimari soruları daha hızlı ve doğru cevaplamak.",
+    [["+%24", "doğruluk"], ["−%12", "görev süresi"], ["41", "katılımcı (akademi + sanayi)"]], "Wettel, Lanza, Robbes, ICSE 2011: Eclipse + Excel'e karşı kontrollü deney"],
+};
+for (const x of DUNYA) { const o = OZET[x.ad]; if (o) [x.ozet, x.metrik, x.mkaynak] = o; }
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const cip = g => `<span class="cip ${g}">${SEKME[g]}</span>`;
+let MANUS = [];
+
+// --- table of contents + active page
+const SAYFALAR = [...document.querySelectorAll("section.sayfa")];
+$("icindekiler").innerHTML = SAYFALAR.map((s, i) => `<li><a href="#${s.id}"><span>${i ? i : "·"}</span><span>${esc(s.dataset.ad)}</span></a></li>`).join("");
+const GOZ = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  const i = SAYFALAR.indexOf(e.target);
+  for (const a of $("icindekiler").querySelectorAll("a")) a.setAttribute("aria-current", a.getAttribute("href") === "#" + e.target.id);
+  $("ilerleme").textContent = `${i + 1} / ${SAYFALAR.length}`;
+}), { threshold: 0.35 });
+SAYFALAR.forEach(s => GOZ.observe(s));
+
+// --- cards
+function kart(x, i, liste) {
+  const gor = x.img?.length ? `<div class="gor" style="background-image:url('${x.img[0][0]}')"></div>` : `<div class="gor yazi">${esc(x.kim)}<br>${esc(x.kaynak)}</div>`;
+  return `<button class="kart" data-l="${liste}" data-i="${i}">${gor}<div class="gvd">
+    <h3>${esc(x.ad)}</h3><p>${esc(x.ozet || x.cumle)}</p>
+    ${x.metrik && x.metrik[0][0] !== "—" ? `<p class="km"><b>${esc(x.metrik[0][0])}</b> ${esc(x.metrik[0][1])}</p>` : ""}
+    <div class="alt">${cip(x.g)}${x.etk ? cip(x.etk) : ""}${x.kapali ? `<span class="cip kapali">kapandı</span>` : ""}${x.sonra ? `<span class="cip ar">sonraki aşama</span>` : ""}${x.demo ? `<span class="cip canli">● canlı demo</span>` : ""}</div></div></button>`;
+}
+// 3 · Yön: eight capabilities, manager wording. Demos/steps reuse the BIZ cards (0 = Ç1, 1 = Ç2, 2 = Ç3).
+const svgUri = body => "data:image/svg+xml," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" font-family="sans-serif"><rect width="320" height="200" fill="#0b0e17"/>${body}</svg>`).replace(/'/g, "%27");
+const KONSEPT_SES = svgUri(`<rect x="18" y="16" width="214" height="40" rx="20" fill="#131827" stroke="#5fd4ff"/><circle cx="40" cy="36" r="9" fill="#5fd4ff"/>
+  <text x="58" y="41" font-size="14" fill="#e4e8f4">Bunu neden çağırıyor?</text>
+  <path d="M 130 58 C 130 84 160 84 160 106" stroke="#5fd4ff" stroke-width="2" stroke-dasharray="4 4" fill="none"/>
+  <polygon points="160,112 214,138 160,164 106,138" fill="#2b86b8"/><polygon points="106,138 160,164 160,190 106,164" fill="#1f6a94"/><polygon points="214,138 160,164 160,190 214,164" fill="#2a7fae"/>
+  <circle cx="160" cy="138" r="30" fill="none" stroke="#c79bff" stroke-width="2.5"/><circle cx="160" cy="138" r="6" fill="#c79bff"/>
+  <text x="12" y="132" font-size="13" fill="#5fd4ff">ses</text><text x="12" y="149" font-size="13" fill="#8d96b2">= fiil</text>
+  <text x="308" y="132" font-size="13" fill="#c79bff" text-anchor="end">dokunma</text><text x="308" y="149" font-size="13" fill="#8d96b2" text-anchor="end">= nesne</text>`);
+const KONSEPT_SESSIZ = svgUri(`<circle cx="34" cy="52" r="14" fill="none" stroke="#5fd4ff" stroke-width="2"/><rect x="30" y="44" width="8" height="14" rx="4" fill="#5fd4ff"/>
+  <text x="58" y="57" font-size="14" fill="#e4e8f4">“payments’a git”</text>
+  <circle cx="34" cy="132" r="14" fill="none" stroke="#c79bff" stroke-width="2"/><circle cx="34" cy="132" r="5" fill="#c79bff"/>
+  <text x="58" y="137" font-size="14" fill="#e4e8f4">binaya dokun</text>
+  <path d="M 166 52 L 212 82 M 166 132 L 212 102" stroke="#8d96b2" stroke-width="1.5" stroke-dasharray="4 4" fill="none"/>
+  <rect x="216" y="62" width="88" height="60" rx="8" fill="#131827" stroke="#4fdc9a"/>
+  <text x="260" y="88" font-size="14" fill="#4fdc9a" text-anchor="middle">payments</text><text x="260" y="108" font-size="12" fill="#8d96b2" text-anchor="middle">açıldı ✓</text>
+  <text x="160" y="184" font-size="12" fill="#8d96b2" text-anchor="middle">iki yol, aynı sonuç</text>`);
+const SONRA_UYARI = "Sonraki aşama: ses katmanı henüz yapılmadı. Bu yetenek bir tasarım ilkesi; literatürle destekleniyor, ikinci aşamada denenecek.";
+const YON = [
+  { g: "c2", ad: "Sorun kendini gösterir", kim: "Yetenek · Operasyon", cumle: "Sorun ekibe kendiliğinden gelir; etkilenen servis ve olası kök neden alarm kartında yazar.",
+    deger: "Ekibin sorunu fark etmek için panoları tek tek taraması gerekmez: alarm kendiliğinden çıkar, etkilenen servisler ve olası kök neden aynı kartta yazar.",
+    mantik: "Her servisin istek sayısı, hata oranı ve gecikmesi sürekli ölçülür. Bir servis eşiği aşınca (örnekte yaklaşık 10 saniye içinde) alarm kartı açılır, ilgili düğüm kırmızıya döner ve etkilenen servisler listelenir.",
+    esin: "Netflix Vizceral: trafiğin akışını tek bakışta gösteren pano (proje artık bakımsız). Luma esin videosundaki “kırmızı modül” fikri. Hey Dashboard! (Dhanoa vd., 2025): açıklamayı ayrı bir sohbet kutusunda değil, panonun üstünde vermek.",
+    kanit: "Ç2 Servis trafiği demosu: “payments yavaşlasın” düğmesi. Servisler bu sayfanın içinde simüle edilir.", kaynak: "Vizceral (Netflix) · arXiv:2510.12386",
+    img: [["img/c2-alarm.png", "Alarm kartı: kök neden ve etkilenen servis, düğüm kırmızı"]], demo: BIZ[1].demo, nasil: BIZ[1].nasil },
+  { g: "c1", ad: "Alarmdan koda iki dokunuş", kim: "Yetenek · Geliştirme", cumle: "Sorunun adresi (dosya ve satır) iki dokunuşta bulunur; ekip ekran değiştirmez.",
+    deger: "Çözüm süresinin bir kısmı “sorun nerede?” sorusuna gider. Burada cevap iki dokunuşta gelir; ekip log, repo ve pano arasında gezmez. Sorunu bulan kişi aynı ekranda hatalı satırı da görür.",
+    mantik: "Servis → dosya → satır. Kırmızı binaya dokunulunca panel açılır: kaç çağrı başarısız, hangi servisten geldi, son hatalar ve hatayı döndüren fonksiyonun dosya:satır bilgisi. “Koda git” satırı kod panelinde işaretler.",
+    esin: "Luma esin videosundaki akış: kırmızı modül → dokun → analiz paneli → “Go to Error” → onarım. CodeCity (Wettel & Lanza, ICSE 2011): şehir metaforuyla kod okumak; 41 katılımcılı deneyde Eclipse + Excel'e göre %24 daha doğru, %12 daha hızlı.",
+    kanit: "Ç1 Neon kod şehri demosu: kırmızı binaya dokunun.", kaynak: "Luma videosu · ICSE 2011",
+    img: [["img/c1-neon-gercek-satir.png", "Hatayı döndüren satır kod panelinde işaretli"]], demo: BIZ[0].demo, nasil: BIZ[0].nasil },
+  { g: "c1", ad: "Gördüğünüz her şey gerçektir", kim: "Yetenek · Mimari ve yönetim", cumle: "Şema elle çizilmez, koddan üretilir; mimari belgesi eskimez.",
+    deger: "Mimari şeması elle çizilmediği için eskimez. Yönetici ve yeni ekip üyesi sistemin bugünkü gerçek hâlini görür; “şema ile kod uyuşmuyor” tartışması azalır.",
+    mantik: "Kod Python ast ile okunur. Servis = ada, dosya = bina, bina yüksekliği = satır sayısı, yay = koddaki çağrı. Renkler canlı trafikten gelir: kırmızı hata demek. Kod değişince şehir de değişir.",
+    esin: "CodeCity (Wettel & Lanza, 2008–2011): sınıf = bina, paket = mahalle. CodeCharta (MaibornWolff): kod metriklerini teknik olmayan birinin de okuyabileceği şehir haritasına çevirir. ExplorViz (Kiel Üniversitesi): canlı izlerden servisler arası çağrı okları; başlangıç altlığımız oldu.",
+    kanit: "Ç1 demosu: sahnedeki her bina kod dizinindeki bir dosyadır.", kaynak: "CodeCity · CodeCharta · ExplorViz",
+    img: [["img/c1-neon-koddan.png", "Binalar services/ kodundan okunuyor; yükseklik = satır sayısı"]], demo: BIZ[0].demo, nasil: BIZ[0].nasil },
+  { g: "c3", ad: "Tek veri, her role kendi ekranı", kim: "Yetenek · Ürün ve ekipler", cumle: "Geliştirici, operasyon ve yönetici aynı veriyi kendi ekranında okur.",
+    deger: "Aynı gerçeği herkes görür, ama her kitle kendi dilinde: geliştirici hatayı, operasyon sağlığı, yönetici “sistem ne yapıyor?” sorusunu. Yeni bir kaynak ya da kitle için ekranlar baştan yazılmaz; ekleme maliyeti düşer.",
+    mantik: "Claude Code oturumu, senaryo ya da OpenTelemetry GenAI izi ortak bir agent olay modeline çevrilir. Aynı veri farklı görünümlerde oynatılır (sprite ofis, ağ grafiği). Yeni kaynak = bir dönüştürücü, yeni görünüm = bir sayfa. Geri sarma ve takılma tespiti modelden gelir.",
+    esin: "agent-flow: düğüm grafiği, durum halkası ve zaman çizelgesi. Pixel Agents: agent'lar piksel bir ofiste çalışır (ofis görünümümüzün görselleri bu depodan). AI Town: LLM agent'ların kasabası. Her biri tek bir görünüm sunuyor; biz birkaçını ortak modelin üstünde gösteriyoruz.",
+    kanit: "Ç3 demosu: telekom senaryosu. “Ofis görünümü” ile “Ağ görünümü” aynı anı gösterir.", kaynak: "agent-flow · Pixel Agents · AI Town",
+    img: [["img/c3-canli-oturum.png", "Gerçek bir Claude Code oturumu agent ofisinde canlı izleniyor"]], demo: BIZ[2].demo, nasil: BIZ[2].nasil },
+  { g: "c1", ad: "Konuşarak ve dokunarak sorma", kim: "Yetenek · Kullanım kolaylığı", cumle: "Teknik olmayan kullanıcı sorusunu doğal cümleyle sorar; sorgu dili öğrenmez.", sonra: true, uyari: SONRA_UYARI,
+    deger: "Teknik olmayan kullanıcı sorgu dili öğrenmez; “bunu neden çağırıyor?” diye sorar. Yönetici ve müşteri toplantıda sistemi kendisi sorgulayabilir; eğitim ihtiyacı azalır.",
+    mantik: "Ses eylemi (fiil), dokunma konuyu (nesne) belirler. “Bunu neden çağırıyor?” derken binaya dokunulur; “hangi servis?” diye tarif etmek gerekmez.",
+    esin: "Saktheeswaran, Srinivasan, Stasko (IEEE VIS 2020): ağ görselleştirmede ses ve dokunma birlikte; katılımcılar çok kipli girdiyi güçlü biçimde tercih etti (nitel çalışma). DuoZone (NYU, 2025): hedef konuşarak söylenir, LLM düzen önerir, kullanıcı elle ince ayar yapar.",
+    kanit: "Henüz demosu yok; görsel bir konsept çizimidir.", kaynak: "arXiv:2004.14505 · arXiv:2511.15676",
+    img: [[KONSEPT_SES, "Konsept çizimi: sesle sorulan soru, dokunulan nesneye uygulanır"]] },
+  { g: "c3", ad: "Sesin sessiz karşılığı", kim: "Yetenek · Erişilebilirlik", cumle: "Açık ofiste ve toplantıda da çalışır: her sesli komutun dokunma karşılığı var.", sonra: true, uyari: SONRA_UYARI,
+    deger: "Açık ofiste, toplantıda ya da gürültülü ortamda kullanım engellenmez. Ses kaybolsa bile iş durmaz; benimseme ve erişilebilirlik riski düşer.",
+    mantik: "Her sesli komutun ekranda bir dokunma ya da düğme karşılığı vardır. Ses işi hızlandıran ek bir yoldur, tek yol değildir.",
+    esin: "Saktheeswaran vd. (2020): ses ve dokunma birbirini tamamlıyor, kullanıcılar ikisini birlikte tercih etti. Hey Dashboard! (2025): ses, metin ve fare ile işaretleme birlikte. DuoZone: sesle öneri, elle ince ayar.",
+    kanit: "Henüz demosu yok; görsel bir konsept çizimidir.", kaynak: "arXiv:2004.14505 · arXiv:2510.12386 · arXiv:2511.15676",
+    img: [[KONSEPT_SESSIZ, "Konsept çizimi: sesli komut ve dokunma aynı sonuca varır"]] },
+  { g: "c3", ad: "Açıklama bakışı kapatmaz", kim: "Yetenek · Karar desteği", cumle: "Karar veren, açıklamayı okurken sorunlu parçayı görmeye devam eder.",
+    deger: "Karar veren kişi açıklamayı okurken sorunlu parçayı görmeye devam eder. Hata ile nedeni aynı bakışta okunur; bağlam kaybolmaz.",
+    mantik: "Uyarı kartları ve ayrıntı panelleri sahnenin kenarına yerleşir; agent'lar, servisler ve çağrı yayları görünür kalır. Açıklama ayrı bir sohbet penceresinde değil, doğrudan sahnede verilir.",
+    esin: "DuoZone (NYU, 2025): öneri ve elle düzenleme ayrı bölgelerde; “görüşü kapatma” ilkemizin dayanağı. Hey Dashboard!: açıklamayı panonun üzerinde, ilgili öğeyi vurgulayarak vermek.",
+    kanit: "Ç3 ağ görünümü, takılma senaryosu: uyarı kartı üstte, ayrıntı sağ panelde, ağ görünür kalır.", kaynak: "arXiv:2511.15676 · arXiv:2510.12386",
+    img: [["img/c3-takilma-ag.png", "Uyarı kartı üstte, ayrıntı sağ panelde; ağ sahnesi açık kalıyor"]], demo: BIZ[2].demo, nasil: BIZ[2].nasil },
+  { g: "c1", ad: "Klavyesiz kullanım", kim: "Yetenek · Benimseme", cumle: "Eğitim gerektirmez: gezinme, yakınlaşma ve geri dönüş dokunmayla.",
+    deger: "Giriş eşiği düşer: yönetici ve müşteri eğitim almadan sistemi gezebilir. Sunumda tek kişi gösterir, herkes izler ve anlar.",
+    mantik: "Bir servise dokun: gruba yakınlaşır, hata kaynağı içeride görünür. Esc ya da boşluk: bir adım geri. Gezinme, yakınlaşma, detay ve geri dönüş dokunmayla yapılır.",
+    esin: "Luma esin videosu: akışta hiç tuşa basılmıyor. Saktheeswaran vd. (2020): dokunmatik ekranda ağ verisini keşfetme (Orko aracı).",
+    kanit: "Ç1 demosu: bir servise, sonra içindeki binaya dokunun.", kaynak: "Luma videosu · arXiv:2004.14505",
+    img: [["img/c1-iliski.png", "Bir servise dokunulunca grup yakınlaşır, dosya ilişkileri görünür"]], demo: BIZ[0].demo, nasil: BIZ[0].nasil },
+];
+const LISTE = { d: DUNYA, b: BIZ, y: YON };
+$("yon-kartlar").innerHTML = YON.map((x, i) => kart(x, i, "y")).join("");
+$("biz-kartlar").innerHTML = BIZ.map((x, i) => kart(x, i, "b")).join("");
+
+let sekme = "c1";
+function sekmeCiz() {
+  $("sekmeler").innerHTML = Object.entries(SEKME).map(([k, v]) => `<button role="tab" data-s="${k}" aria-selected="${k === sekme}">${v}</button>`).join("");
+  $("sekme-not").textContent = SEKME_NOT[sekme];
+  $("dunya-kartlar").innerHTML = DUNYA.map((x, i) => x.g === sekme ? kart(x, i, "d") : "").join("");
+}
+$("sekmeler").onclick = e => { const b = e.target.closest("[data-s]"); if (b) { sekme = b.dataset.s; sekmeCiz(); } };
+sekmeCiz();
+
+// Manus VR showcase → same card list, its own detail format
+fetch("manus.json").then(r => r.json()).then(a => {
+  for (const x of a) DUNYA.push({ g: "vr", manus: x, ad: x.name, cumle: x.tagline, kim: `${x.founded} · ${x.status}`,
+    kapali: /kapat/i.test(x.status), img: x.screenshots.map(s => [s, x.name]) });
+  sekmeCiz();
+}).catch(() => {});
+
+// --- detail
+function detay(x) {
+  const alan = (k, v) => v ? `<div><dt class="lbl">${k}</dt><dd>${esc(v)}</dd></div>` : "";
+  const m = x.manus;
+  const olcuH = `${x.ozet ? `<p class="ozet-k"><b>Ne çözüyor</b>${esc(x.ozet)}</p>` : ""}
+    ${x.metrik ? `<div class="olcu">${x.metrik.map(([v, l]) => `<div><b class="${v === "—" ? "yok" : ""}">${esc(v)}</b><span>${esc(l)}</span></div>`).join("")}</div><p class="kaynakca" style="margin-top:-8px">${esc(x.mkaynak)}</p>` : ""}`;
+  const govde = m ? `
+    <p style="font-size:17px">${esc(m.description)}</p>
+    <div class="olcu"><div><b>${esc(m.founded)}</b><span>Kuruluş</span></div><div><b>${esc(m.marketSize)}</b><span>Pazar büyüklüğü*</span></div>
+      <div><b>${esc(m.funding)}</b><span>Yatırım*</span></div><div><b>${esc(m.status)}</b><span>Durum</span></div>
+      <div><b>${esc(m.blueOcean.creativity)} / ${esc(m.blueOcean.execution)}</b><span>Yaratıcılık / uygulama</span></div></div>
+    <dl class="alanlar">${alan("Hedef kitle", m.targetAudience)}${alan("Çözüm", m.solution)}${alan("Müşteriler", m.customers.join(", "))}${alan("Mavi Okyanus konumu", m.blueOcean.position)}</dl>
+    <div><div class="lbl" style="margin-bottom:8px">Haberler*</div><div class="haberler">${m.news.map(n => `<div><b>${esc(n.title)}</b><span>${esc(n.source)} · ${esc(n.date)} · ${esc(n.excerpt)}</span></div>`).join("")}</div></div>
+    <p class="uyari">* Manus derlemesi; doğrulanmamıştır.</p>
+    <div class="demolar"><a href="${esc(m.demoVideo.replace("/embed/", "/watch?v="))}" target="_blank" rel="noopener">Tanıtım videosu (YouTube) ↗</a> · <a href="${esc(m.website)}" target="_blank" rel="noopener">${esc(m.website.replace("https://", ""))} ↗</a></div>`
+  : x.deger ? `
+    <p style="font-size:18px">${esc(x.cumle)}</p>
+    <dl class="alanlar">${alan("Yönetici için değeri", x.deger)}${alan("Nasıl çalışıyor", x.mantik)}${alan("Nereden esinlendik", x.esin)}${alan("Nerede görülür", x.kanit)}${alan("Kaynak", x.kaynak)}</dl>
+    ${x.nasil ? `<div><div class="lbl" style="margin-bottom:8px">Canlı denemek için</div><ol class="adim">${x.nasil.map(s => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}`
+  : x.amac ? `
+    ${x.ozet ? `<p class="ozet-k"><b>Ne çözüyor</b>${esc(x.ozet)}</p>` : ""}
+    ${x.metrik ? `<div class="olcu">${x.metrik.map(([v, l]) => `<div><b class="${v === "—" ? "yok" : ""}">${esc(v)}</b><span>${esc(l)}</span></div>`).join("")}</div><p class="kaynakca" style="margin-top:-8px">${esc(x.mkaynak)}</p>` : ""}
+    <dl class="alanlar">${alan("Amaç", x.amac)}${alan("Literatüre katkısı", x.katki)}${alan("Çıktı", x.cikti)}${alan("Performans / bulgular", x.perf)}${alan("Kullanılan teknoloji", x.tek)}${alan("Bize kattığı", x.bize)}${alan("Kaynak", x.kaynak)}</dl>`
+  : `
+    ${x.ozet ? olcuH : `<p style="font-size:18px">${esc(x.cumle)}</p>`}
+    <dl class="alanlar">${alan("Kimin için", x.kitle)}${alan(x.fark ? "Ne yapıyor" : "Nasıl", x.cozum)}${alan("Farkı", x.fark)}${alan("Bizim aldığımız", x.aldik)}${alan("Kaynak", x.kaynak)}</dl>
+    ${x.nasil ? `<div><div class="lbl" style="margin-bottom:8px">Nasıl kullanılır</div><ol class="adim">${x.nasil.map(s => `<li>${esc(s)}</li>`).join("")}</ol></div>` : ""}
+`;
+  $("d-ic").className = x.deger ? "dl yon" : "dl";
+  $("d-ic").innerHTML = `<header><div><span class="lbl">${esc(x.kim)}</span><h3 id="d-ad">${esc(x.ad)}</h3><div class="alt">${cip(x.g)}${x.etk ? cip(x.etk) : ""}</div></div>
+      <button class="kapat" data-kapat>✕ Kapat</button>
+      ${x.demo ? `<div class="demolar">${x.demo.map(d => `<button data-demo="${esc(d[0])}" data-ad="${esc(x.ad + " · " + d[1])}">▶ ${esc(d[1])}</button>`).join("")}</div>` : ""}</header>
+    ${x.img?.length ? `<div class="galeri"><img class="buyuk" alt="" src="${x.img[0][0]}"><div class="alt-yazi">${esc(x.img[0][1])}</div>
+      ${x.img.length > 1 ? `<div class="kucuk">${x.img.map((g, j) => `<button data-gi="${j}" aria-current="${j === 0}" aria-label="${esc(g[1])}"><img src="${g[0]}" alt=""></button>`).join("")}</div>` : ""}</div>` : ""}
+    ${govde}
+    ${x.uyari ? `<p class="uyari">${esc(x.uyari)}</p>` : ""}
+    ${x.url ? `<a href="${x.url}" target="_blank" rel="noopener">${esc(x.url.replace("https://", ""))} ↗</a>` : ""}`;
+  $("d-ic").onclick = e => {
+    const g = e.target.closest("[data-gi]");
+    if (g) { const im = x.img[g.dataset.gi]; $("d-ic").querySelector(".buyuk").src = im[0]; $("d-ic").querySelector(".alt-yazi").textContent = im[1];
+      for (const b of $("d-ic").querySelectorAll("[data-gi]")) b.setAttribute("aria-current", b === g); }
+    if (e.target.closest("[data-kapat]")) $("detay").close();
+    const d = e.target.closest("[data-demo]"); if (d) { $("detay").close(); sahne(d.dataset.demo, d.dataset.ad, x.nasil); }
+  };
+  $("detay").showModal();
+}
+document.addEventListener("click", e => { const k = e.target.closest(".kart"); if (k) detay(LISTE[k.dataset.l][k.dataset.i]); });
+$("detay").addEventListener("click", e => { if (e.target === $("detay")) $("detay").close(); });
+
+// --- live demo: srcdoc frame (same technique as the project board): the viewer doesn't load our files as frame URLs, but fetch works.
+// The page gets a <base> to its folder, its query/hash as __Q/__H, and its relative links come back here.
+let acik = null;
+async function sahne(yol, ad, nasil) {
+  acik = yol ? { yol, ad, nasil } : null;
+  if (!yol) { $("sahne").hidden = true; $("sahne").innerHTML = ""; document.documentElement.style.overflow = ""; return; }
+  const m = /^([^?#]*)(\?[^#]*)?(#.*)?$/.exec(yol), dosya = m[1], dir = dosya.slice(0, dosya.lastIndexOf("/") + 1);
+  $("sahne").innerHTML = `<div class="bar"><b>${esc(ad)}</b><button class="kapat" data-kapat>✕ Kapat (Esc)</button>
+    ${nasil ? `<div class="yardim">${nasil.map(esc).join(" · ")}</div>` : ""}</div><div class="yukle">Yükleniyor…</div>`;
+  $("sahne").hidden = false; document.documentElement.style.overflow = "hidden";
+  let html;
+  try { const r = await fetch(new URL(dosya, document.baseURI)); if (!r.ok) throw new Error(r.status); html = await r.text(); }
+  catch (e) { $("sahne").querySelector(".yukle").textContent = `Demo açılamadı (${e.message}). Sayfayı yenileyip tekrar deneyin.`; return; }
+  const ek = `<base href="${new URL(dir, document.baseURI).href}"><script>window.__Q=${JSON.stringify(m[2] || "")};window.__H=${JSON.stringify(m[3] || "")};
+addEventListener("click",e=>{const a=e.target.closest("a[href]");if(!a||e.defaultPrevented)return;const h=a.getAttribute("href");
+if(/^[a-z][a-z0-9+.-]*:/i.test(h)||h.startsWith("#"))return;e.preventDefault();parent.postMessage({nexusAc:h},"*");});<\/script>`;
+  html = html.includes("<head>") ? html.replace("<head>", "<head>" + ek) : ek + html;
+  if (acik?.yol !== yol) return;
+  const alan = document.createElement("div"); alan.className = "alan";
+  const f = document.createElement("iframe"); f.title = ad; f.srcdoc = html; alan.append(f);
+  $("sahne").querySelector(".yukle").replaceWith(alan);
+  sigdir(f, alan);
+  acik.dir = dir;
+}
+// Demo pages are laid out for a desktop window and some are taller than the screen: lay the frame out at the stage
+// width, measure the page's height and shrink the whole frame until it fits, so no control is below the fold.
+function sigdir(f, alan) {
+  // ponytail: assumes page height grows with its width (canvas demos); narrows the frame until it fits, max 4 passes
+  const olc = () => {
+    if (!f.isConnected) return;
+    const W = alan.clientWidth, H = alan.clientHeight;
+    let w = W;
+    for (let n = 0; n < 4; n++) {
+      f.style.width = w + "px"; f.style.height = H + "px";
+      let h = H; try { h = f.contentDocument.documentElement.scrollHeight; } catch (e) { return; }
+      if (h <= H + 2) break;
+      w = Math.max(320, Math.floor(w * H / h) - 4);
+    }
+  };
+  f.addEventListener("load", () => { olc(); setTimeout(olc, 600); setTimeout(olc, 2000); });
+  new ResizeObserver(olc).observe(alan);
+}
+addEventListener("message", e => { const h = e.data?.nexusAc; if (typeof h === "string" && acik) sahne(acik.dir + h.replace(/^\.\//, ""), acik.ad, acik.nasil); });
+addEventListener("keydown", e => { if (e.key === "Escape" && acik) sahne(null); });
+$("sahne").addEventListener("click", e => { if (e.target.closest("[data-kapat]")) sahne(null); });
+</script>

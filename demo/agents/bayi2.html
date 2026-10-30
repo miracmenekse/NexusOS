@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EtiyaCell Satış Akışı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* Etiya brand book: turuncu #F58220, lacivert #242441. Koyu sahne, cam paneller. */
+  :root { --or:#F58220; --or2:#ffb066; --nv:#242441; --bg:#07071a; --fg:#f3f4fb; --dim:#9aa0c3; --glass:rgba(255,255,255,.05);
+    --line:rgba(255,255,255,.11); --ok:#3ddc97; color-scheme:dark; }
+  * { box-sizing:border-box; }
+  html, body { height:100%; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:14px/1.45 Inter,system-ui,sans-serif; overflow:hidden; }
+  body::before { content:""; position:fixed; inset:-20%; z-index:-1; filter:blur(30px); animation:drift 26s ease-in-out infinite alternate;
+    background:radial-gradient(38% 34% at 14% 8%,#F5822038,transparent 70%),radial-gradient(44% 40% at 88% 92%,#5b4bff30,transparent 70%),radial-gradient(30% 30% at 58% 42%,#00d2ff12,transparent 70%); }
+  @keyframes drift { to { transform:translate(4%,-3%) rotate(5deg); } }
+  .app { height:100%; max-width:1640px; grid-template-columns:minmax(0,1fr); margin:auto; padding:14px 16px; display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:12px; }
+  header { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.1em; }
+  .brand small { display:block; font:500 12px Inter,system-ui; letter-spacing:0; color:var(--dim); }
+  .logo { width:26px; height:22px; position:relative; }
+  .logo i { position:absolute; height:6px; width:18px; border-radius:3px; background:var(--or); }
+  .logo i:nth-child(1){ left:0; bottom:0; } .logo i:nth-child(2){ left:4px; bottom:8px; opacity:.6; } .logo i:nth-child(3){ left:8px; bottom:16px; opacity:.3; }
+  .live { margin-left:auto; display:flex; align-items:center; gap:8px; color:var(--dim); font-size:12px; font-variant-numeric:tabular-nums; }
+  .live b { color:var(--fg); font-size:15px; }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--ok); box-shadow:0 0 10px var(--ok); }
+  .paused .dot { background:var(--dim); box-shadow:none; }
+  .ctl { display:flex; gap:6px; }
+  .ctl button { background:var(--glass); color:var(--fg); border:1px solid var(--line); border-radius:10px; padding:6px 11px; font:600 13px Inter,system-ui; cursor:pointer; }
+  .ctl button:hover { border-color:var(--or); } .ctl button.on { background:var(--or); color:#1a1020; border-color:var(--or); }
+  #chap { display:flex; gap:6px; margin:0; padding:0; list-style:none; }
+  #chap li { flex:1; min-width:0; cursor:pointer; }
+  #chap span { display:block; font:600 11px Inter,system-ui; color:var(--dim); margin-bottom:5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #chap li.on span { color:var(--or2); } #chap li.ok span { color:var(--fg); }
+  #chap i { display:block; height:4px; border-radius:2px; background:rgba(255,255,255,.1); overflow:hidden; }
+  #chap i::after { content:""; display:block; height:100%; width:calc(var(--p,0) * 100%); background:linear-gradient(90deg,var(--or),var(--or2)); box-shadow:0 0 8px var(--or); }
+  main { display:grid; grid-template-columns:300px minmax(0,1fr) 320px; gap:12px; min-height:0; }
+  .card { background:var(--glass); border:1px solid var(--line); border-radius:20px; backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+    min-height:0; display:flex; flex-direction:column; overflow:hidden; box-shadow:0 20px 60px -30px #000; }
+  .card h2 { margin:14px 16px 6px; font:700 11px Inter,system-ui; letter-spacing:.14em; text-transform:uppercase; color:var(--dim); display:flex; justify-content:space-between; gap:8px; }
+  .card h2 em { font-style:normal; letter-spacing:0; text-transform:none; font-weight:600; color:var(--or2); }
+  /* iPad: temsilcinin ekranı */
+  #chat { flex:1; overflow:auto; padding:4px 14px 14px; scroll-behavior:smooth; }
+  .b { max-width:86%; padding:8px 12px; border-radius:16px; margin:7px 0; animation:in .35s ease-out; overflow-wrap:anywhere; }
+  .b small { display:block; font-size:10.5px; font-weight:600; opacity:.7; margin-bottom:2px; }
+  .b.cus { background:rgba(255,255,255,.09); border-bottom-left-radius:4px; }
+  .b.csr { margin-left:auto; background:linear-gradient(135deg,#F58220,#ff9d4d); color:#1c1020; border-bottom-right-radius:4px; font-weight:500; }
+  .b.ai { max-width:100%; background:linear-gradient(135deg,#F5822022,#5b4bff1c); border:1px solid #F5822088; }
+  .b.ai small { color:var(--or2); opacity:1; }
+  .b.sys { max-width:100%; text-align:center; font-size:11.5px; color:var(--dim); padding:3px 8px; }
+  @keyframes in { from { opacity:0; transform:translateY(8px) scale(.98); } }
+  /* ağ */
+  #netc { position:relative; }
+  #net { flex:1; width:100%; min-height:0; }
+  .edge { stroke:rgba(255,255,255,.09); stroke-width:1.5; fill:none; }
+  .edge.st { stroke-dasharray:3 5; }
+  .trail { fill:none; stroke-width:2.5; stroke-linecap:round; animation:fade 2.2s forwards; }
+  @keyframes fade { 0% { opacity:.9; } 100% { opacity:0; } }
+  .node circle.core { fill:#14142e; stroke:var(--c); stroke-width:2; transition:fill .3s; }
+  .node circle.halo { fill:var(--c); opacity:0; transition:opacity .4s; }
+  .node.on circle.core { fill:color-mix(in srgb,var(--c) 30%,#14142e); }
+  .node.on circle.halo { opacity:.22; animation:pulse 1.4s ease-in-out infinite; transform-box:fill-box; transform-origin:center; }
+  @keyframes pulse { 50% { transform:scale(1.25); opacity:.08; } }
+  .node text { fill:var(--fg); font:700 16px Inter,system-ui; text-anchor:middle; }
+  .node text.ic { font-size:20px; dominant-baseline:central; }
+  .node text.rol { fill:var(--dim); font:500 12.5px Inter,system-ui; }
+  .node text.ds { fill:var(--or2); font:600 13px Inter,system-ui; }
+  .stn rect { fill:#10102a; stroke:rgba(255,255,255,.14); transition:all .3s; }
+  .stn.on rect { stroke:var(--or); fill:#2a1a14; filter:url(#glow); }
+  .stn text { fill:var(--dim); font:600 14px Inter,system-ui; dominant-baseline:central; }
+  .stn.on text { fill:#fff; }
+  .legend { position:absolute; left:16px; bottom:12px; display:flex; gap:14px; font-size:11px; color:var(--dim); }
+  .legend i { display:inline-block; width:18px; height:0; border-top:2px solid var(--or); vertical-align:middle; margin-right:5px; }
+  .legend i.d { border-top:2px dashed var(--dim); }
+  /* teklif kartı */
+  .offer { padding:4px 16px 14px; display:flex; flex-direction:column; gap:12px; overflow:auto; }
+  .hero { border-radius:16px; padding:14px; background:linear-gradient(140deg,#F582201f,#ffffff08); border:1px solid var(--line); }
+  .hero .tf { font-weight:700; font-size:16px; } .hero .tf.wait { color:var(--dim); font-weight:500; }
+  .price { display:flex; align-items:baseline; gap:10px; margin-top:4px; font-variant-numeric:tabular-nums; }
+  .price b { font-size:42px; font-weight:800; letter-spacing:-.02em; background:linear-gradient(90deg,var(--or),var(--or2)); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .price s { color:var(--dim); font-size:16px; } .price span { color:var(--dim); font-size:13px; }
+  .bars { display:grid; gap:7px; }
+  .bar { display:grid; grid-template-columns:100px 1fr 58px; align-items:center; gap:8px; font-size:12px; color:var(--dim); }
+  .bar div { height:10px; border-radius:5px; background:rgba(255,255,255,.07); overflow:hidden; }
+  .bar div i { display:block; height:100%; width:0; border-radius:5px; background:#7d84ad; transition:width 1s cubic-bezier(.2,.8,.2,1); }
+  .bar.me div i { background:linear-gradient(90deg,var(--or),var(--or2)); box-shadow:0 0 10px var(--or); }
+  .bar b { text-align:right; color:var(--fg); font-variant-numeric:tabular-nums; }
+  .bar.me { color:var(--fg); font-weight:600; }
+  .rows { display:grid; }
+  .row { display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-bottom:1px dashed var(--line); font-size:13px; opacity:.35; transition:opacity .4s; }
+  .row b { font-weight:600; text-align:right; } .row.on { opacity:1; } .row.new { animation:flash 1.6s; }
+  @keyframes flash { 0% { background:#F5822040; } 100% { background:transparent; } }
+  .gain { display:none; border-radius:14px; padding:10px 12px; background:#3ddc9718; border:1px solid #3ddc9766; color:#bff5dd; font-size:13px; }
+  .gain.on { display:block; animation:in .5s; } .gain b { color:#fff; }
+  /* anlatıcı */
+  .nar { display:grid; grid-template-columns:auto 1fr; gap:4px 18px; align-items:center; padding:14px 20px; }
+  .nar .no { grid-row:span 2; font:800 40px/1 Inter,system-ui; color:var(--or); font-variant-numeric:tabular-nums; min-width:56px; }
+  .nar h3 { margin:0; font:700 13px Inter,system-ui; letter-spacing:.12em; text-transform:uppercase; color:var(--or2); }
+  .nar p { margin:0; font-size:17px; font-weight:500; line-height:1.4; }
+  #ev { grid-column:2; font-size:12.5px; color:var(--dim); min-height:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #ev b { font-weight:700; }
+  /* özet */
+  #end { position:fixed; inset:0; display:grid; place-items:center; background:rgba(5,5,18,.6); backdrop-filter:blur(6px); opacity:0; pointer-events:none; transition:opacity .6s; z-index:9; padding:16px; }
+  #end.on { opacity:1; pointer-events:auto; }
+  #end .card { padding:26px 28px; max-width:760px; width:100%; transform:translateY(16px) scale(.98); transition:transform .6s; background:rgba(20,20,46,.82); }
+  #end.on .card { transform:none; }
+  #end .ok { color:var(--ok); font-weight:700; letter-spacing:.12em; font-size:12px; text-transform:uppercase; }
+  #end h1 { margin:6px 0 4px; font-size:30px; letter-spacing:-.01em; }
+  #end p { margin:0 0 18px; color:var(--dim); }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; }
+  .tile { border:1px solid var(--line); border-radius:14px; padding:12px 14px; background:rgba(255,255,255,.04); }
+  .tile b { display:block; font-size:26px; font-weight:800; font-variant-numeric:tabular-nums; }
+  .tile.hi b { color:var(--or2); } .tile span { color:var(--dim); font-size:12px; }
+  #end .ctl { margin-top:18px; }
+  @media (max-width:1100px) { main { grid-template-columns:260px minmax(0,1fr); } main > .card:last-child { grid-column:span 2; max-height:300px; } }
+  @media (max-width:760px) { body { overflow:auto; } .app { height:auto; } main { grid-template-columns:minmax(0,1fr); } main > .card:last-child { grid-column:auto; max-height:none; }
+    #chat { max-height:300px; } #netc { overflow-x:auto; } #net { flex:none; width:860px; height:448px; } #chap span { font-size:0; } #chap li.on span { font-size:11px; } .nar p { font-size:15px; } .nar .no { font-size:30px; } .legend { display:none; } }
+  @media (prefers-reduced-motion:reduce) { *, body::before { animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="brand"><div class="logo"><i></i><i></i><i></i></div><div>ETIYACELL<small>Bayi satış asistanı · önde temsilci, arkada agent ekibi</small></div></div>
+    <div class="live"><span class="dot"></span><span>senaryo saati</span><b id="clk">0:00</b></div>
+    <div class="ctl"><button id="pl" title="Oynat / duraklat (boşluk)">⏸</button><button id="rs" title="Baştan">⟲</button>
+      <button data-s=".5">0,5×</button><button data-s="1" class="on">1×</button><button data-s="2">2×</button></div>
+  </header>
+  <ol id="chap"></ol>
+  <main>
+    <section class="card"><h2>Temsilcinin iPad'i <em>mağaza</em></h2><div id="chat"></div></section>
+    <section class="card" id="netc"><h2>Arka ofis · agent ekibi <em id="act">bekliyor</em></h2>
+      <svg id="net" viewBox="0 0 960 500" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Agent'lar ve kullandıkları sistemler">
+        <defs><filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        <g id="edges"></g><g id="trails"></g><g id="nodes"></g><g id="dots" filter="url(#glow)"></g>
+      </svg>
+      <div class="legend"><span><i></i>mesaj</span><span><i class="d"></i>sistem çağrısı</span></div>
+    </section>
+    <section class="card"><h2>Müşteriye teklif <em id="ost">hazırlanıyor</em></h2>
+      <div class="offer">
+        <div class="hero"><div class="tf wait" id="tf">Tarife seçiliyor…</div><div class="price" id="pr"></div></div>
+        <div class="bars" id="bars"></div>
+        <div class="gain" id="gain"></div>
+        <div class="rows" id="rows"></div>
+      </div>
+    </section>
+  </main>
+  <section class="card nar"><div class="no" id="no">00</div><h3 id="ct">Başlangıç</h3><p id="np"></p><div id="ev"></div></section>
+</div>
+<div id="end"><div class="card"><div class="ok" id="eok"></div><h1 id="eh"></h1><p id="ep"></p><div class="tiles" id="tiles"></div>
+  <div class="ctl"><button id="again">⟲ Tekrar izle</button></div></div></div>
+<script>
+// Bayi satış asistanı, ikinci görünüm: aynı senaryo (altlık.py biçimi + giris/anlati/kart alanları), sahne yerine
+// üç panel: temsilcinin iPad'i, agent ağı, dolan teklif kartı. Durum = f(zaman): her ana atlanabilir (?t=25).
+const $ = id => document.getElementById(id), NS = "http://www.w3.org/2000/svg";
+const OR = "#F58220", PAL = ["#4fd1ff", "#6ee7a0", "#c792ea", "#ffd166", "#56d4bc", "#ff9fb2"];
+const ICON = { ana: "✦", insan: "🧑‍💼", agent: "◆" }, BAR = [["fatura", "Bugünkü fatura"], ["rakip", "Rakip teklifi"], ["fiyat", "EtiyaCell yeni"]];
+const HERO = ["tarife", "liste", "fiyat", "fatura", "rakip"], fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
+const svg = (tag, at, p) => { const e = document.createElementNS(NS, tag); for (const k in at) e.setAttribute(k, at[k]); p?.append(e); return e; };
+
+let D, N, CH, HUMAN, CSR, now, ptr, speed = 1, running = true, last, dots, kart, shown;
+function layout(d) { // soldan sağa: temsilci → orkestratör → agent sütunu → sistem sütunu
+  N = {}; const ag = Object.entries(d.agents).filter(([, x]) => x.tur === "agent");
+  for (const [a, x] of Object.entries(d.agents)) {
+    if (x.tur === "ana") N[a] = { x: 340, y: 250, r: 40, col: OR, ic: ICON.ana };
+    else if (x.tur === "insan" && (a === "CSR" || /temsilci/i.test(x.rol))) CSR = a, N[a] = { x: 130, y: 250, r: 30, col: "#ffd166", ic: "📱" };
+  }
+  HUMAN = a => d.agents[a]?.tur === "insan" && a !== CSR;
+  ag.forEach(([a], i) => {
+    const y = ag.length < 2 ? 250 : 55 + i * 390 / (ag.length - 1), s = d.events.find(e => e.kind === "tool" && e.agent === a)?.station;
+    N[a] = { x: 560, y, r: 24, col: PAL[i % PAL.length], ic: ICON.agent, st: s, side: 1 };
+    if (s && d.stations[s]) N["@" + s] = { x: 872, y, stn: s, col: N[a].col };
+  });
+}
+function draw() {
+  const E = $("edges"), V = $("nodes"); E.innerHTML = V.innerHTML = "";
+  const hub = Object.keys(N).find(k => D.agents[k]?.tur === "ana"), cut = (t, n) => t.length > n ? t.slice(0, n - 1) + "…" : t;
+  for (const [k, n] of Object.entries(N)) {
+    if (n.stn) continue;
+    if (k !== hub) svg("path", { class: "edge", d: `M${N[hub].x},${N[hub].y} C${(N[hub].x + n.x) / 2},${N[hub].y} ${(N[hub].x + n.x) / 2},${n.y} ${n.x},${n.y}` }, E);
+    if (n.st && N["@" + n.st]) svg("line", { class: "edge st", x1: n.x + n.r, y1: n.y, x2: N["@" + n.st].x - 82, y2: n.y }, E);
+  }
+  for (const [k, n] of Object.entries(N)) {
+    const g = svg("g", { class: n.stn ? "stn" : "node", transform: `translate(${n.x},${n.y})` }, V); g.style.setProperty("--c", n.col); n.el = g;
+    if (n.stn) { const s = D.stations[n.stn]; svg("rect", { x: -82, y: -19, width: 164, height: 38, rx: 11 }, g); svg("text", { x: -70, y: 0 }, g).textContent = `${s.icon}  ${s.label}`; continue; }
+    svg("circle", { class: "halo", r: n.r + 12 }, g); svg("circle", { class: "core", r: n.r }, g);
+    svg("text", { class: "ic", y: 1, fill: n.col }, g).textContent = n.ic;
+    const rol = D.agents[k].rol, nm = k === CSR ? "temsilci" : k;
+    if (n.side) { // agent: yazılar sağda, sistem kutusuna kadar
+      const t = (c, y, v) => { const e = svg("text", { class: c, x: n.r + 14, y }, g); e.style.textAnchor = "start"; e.textContent = v; return e; };
+      t("", -8, nm); t("rol", 9, cut(rol, 25)); n.ds = t("ds", 27, ""); n.cut = 24;
+    } else {
+      svg("text", { y: n.r + 18 }, g).textContent = nm; svg("text", { class: "rol", y: n.r + 34 }, g).textContent = cut(rol, 28);
+      n.ds = svg("text", { class: "ds", y: -n.r - 14 }, g); n.cut = k === CSR ? 24 : 32;
+    }
+  }
+}
+function reset() {
+  now = 0; ptr = 0; dots = []; kart = {}; shown = 0;
+  for (const n of Object.values(N)) n.act = -9;
+  $("chat").innerHTML = $("trails").innerHTML = $("dots").innerHTML = $("ev").innerHTML = ""; $("end").classList.remove("on");
+  $("gain").className = "gain"; $("ost").textContent = "hazırlanıyor"; draw();
+  const ids = D.events.flatMap(e => e.kart || []).filter(k => !HERO.includes(k.id)); // dolacak satırlar baştan boş görünür
+  $("rows").innerHTML = ids.map(k => `<div class="row" id="r-${k.id}"><span>${k.ad}</span><b>—</b></div>`).join("");
+  $("bars").innerHTML = BAR.map(([id, ad]) => `<div class="bar${id === "fiyat" ? " me" : ""}" id="b-${id}"><span>${ad}</span><div><i></i></div><b>—</b></div>`).join("");
+  hero(); chapter();
+}
+function bubble(cls, who, text) {
+  const b = document.createElement("div"); b.className = "b " + cls; b.innerHTML = (who ? `<small>${who}</small>` : "") + text;
+  $("chat").append(b); $("chat").scrollTop = 1e6;
+}
+const tag = a => `<b style="color:${N[a]?.col || "#c9cde6"}">${a === CSR ? "temsilci" : a}</b>`;
+function apply(e, instant) { // bir olayı her panele işler; instant = atlamada animasyonsuz
+  shown++;
+  const from = e.kind === "msg" ? e.from : e.agent;
+  if (e.kind === "msg") {
+    if (HUMAN(e.from)) bubble("cus", e.from, e.text);
+    else if (HUMAN(e.to)) bubble("csr", "temsilci", e.text);
+    else if (e.from === CSR) bubble("sys", "", `↗ asistana iletildi: ${e.text}`);
+    else if (e.to === CSR) bubble("ai", `✦ ${e.from} önerisi`, e.text);
+    if (N[e.from] && N[e.to]) { fly(e.from, e.to, N[e.from].col, instant); N[e.to].act = now; }
+    $("ev").innerHTML = `${tag(e.from)} → ${tag(e.to)} · ${e.text}`;
+  } else if (e.kind === "tool") {
+    const s = D.stations[e.station];
+    if (from === CSR) bubble("sys", "", `${s.icon} ${e.text}`);
+    if (N["@" + e.station]) { fly(from, "@" + e.station, N[from].col, instant); N["@" + e.station].act = now; }
+    $("ev").innerHTML = `${tag(from)} · ${s.icon} ${s.label}: ${e.text}`;
+  } else if (e.kind === "say") { bubble(HUMAN(from) ? "cus" : "csr", from, e.text); $("ev").innerHTML = `${tag(from)} · ${e.text}`; }
+  else if (e.kind === "sonuc") { finish(e, instant); $("ev").innerHTML = `${tag(from)} · sonuç: ${e.text}`; }
+  if (N[from]) { N[from].act = now; if (N[from].ds && e.kind !== "sonuc") N[from].ds.textContent = e.text.length > N[from].cut ? e.text.slice(0, N[from].cut - 1) + "…" : e.text; }
+  for (const k of e.kart || []) { kart[k.id] = k; card(k.id, instant); }
+}
+function fly(a, b, col, instant) {
+  if (instant || !N[a] || !N[b]) return;
+  const p = N[a], q = N[b], mx = (p.x + q.x) / 2, my = (p.y + q.y) / 2, dx = q.x - p.x, dy = q.y - p.y, L = Math.hypot(dx, dy) || 1;
+  const c = { x: mx - dy / L * L * .18, y: my + dx / L * L * .18 }; // hafif kavis: gidiş ve dönüş üst üste binmez
+  svg("path", { class: "trail", d: `M${p.x},${p.y} Q${c.x},${c.y} ${q.x},${q.y}`, stroke: col }, $("trails"));
+  dots.push({ p, q, c, t0: now, col, el: svg("circle", { r: 6, fill: col }, $("dots")) });
+  if ($("trails").childElementCount > 14) $("trails").firstChild.remove();
+}
+function card(id, instant) {
+  if (HERO.includes(id)) hero(instant);
+  const r = $("r-" + id); if (r) { r.classList.add("on"); if (!instant) r.classList.remove("new"), void r.offsetWidth, r.classList.add("new"); r.querySelector("b").textContent = kart[id].deger; }
+}
+function hero(instant) {
+  const k = id => kart[id];
+  $("tf").className = "tf" + (k("tarife") ? "" : " wait"); $("tf").textContent = k("tarife")?.deger || "Tarife seçiliyor…";
+  $("pr").innerHTML = k("fiyat") ? `<b>${k("fiyat").deger}</b><s>${k("liste")?.deger || ""}</s><span>/ay</span>`
+    : k("liste") ? `<b style="opacity:.5">${k("liste").deger}</b><span>indirim aranıyor…</span>` : "";
+  const max = Math.max(...BAR.map(([id]) => k(id)?.n || 0)) || 1;
+  for (const [id] of BAR) { const b = $("b-" + id); if (!b || !k(id)) continue; b.querySelector("i").style.width = k(id).n / max * 100 + "%"; b.querySelector("b").textContent = k(id).deger; }
+  if (k("fiyat")) { $("ost").textContent = "onaylandı"; gain(); }
+}
+const save = () => { const f = kart.fatura?.n, p = kart.fiyat?.n, r = kart.rakip?.n; return f && p ? { ay: f - p, rak: r ? r - p : null } : null; };
+function gain() { const s = save(); if (!s) return; $("gain").classList.add("on");
+  $("gain").innerHTML = `Müşteri ayda <b>${s.ay} TL</b> tasarruf ediyor${s.rak > 0 ? `, rakip teklifinden <b>${s.rak} TL</b> ucuz` : ""}.`; }
+function finish(e, instant) {
+  const s = save(), ag = Object.values(D.agents).filter(x => x.tur === "agent").length, ay = kart.taahhut?.n;
+  const tools = D.events.filter(x => x.kind === "tool" && x.agent !== CSR).length, msgs = D.events.filter(x => x.kind === "msg" && N[x.from] && N[x.to]).length;
+  $("eh").textContent = `${e.ok ? "Satış kapandı" : "Satış kaybedildi"}: ${kart.tarife?.deger || ""} ${kart.fiyat?.deger || ""}`.trim();
+  $("eok").textContent = e.ok ? "✓ Satış tamamlandı" : "✕ Satış kapanmadı"; $("eok").style.color = e.ok ? "" : "#ff6b6b";
+  $("ep").textContent = D.anlati?.[e.asama] || "";
+  $("tiles").innerHTML = [
+    [fmt(e.t), "talepten imzaya (senaryo süresi)"],
+    s && [`${s.ay} TL`, "müşteriye aylık tasarruf", 1],
+    s && ay && [`${(s.ay * ay).toLocaleString("tr-TR")} TL`, `${ay} aylık taahhütte toplam tasarruf`, 1],
+    s?.rak > 0 && [`${s.rak} TL`, "rakip teklifinden ucuz"],
+    [`${ag} + 1`, "agent + orkestratör"],
+    [`${msgs} · ${tools}`, "ekip içi mesaj · sistem çağrısı"],
+  ].filter(Boolean).map(([v, t, h]) => `<div class="tile${h ? " hi" : ""}"><b>${v}</b><span>${t}</span></div>`).join("");
+  setTimeout(() => $("end").classList.add("on"), instant ? 0 : 1400);
+}
+function chapter() { // aşama çubuğu + anlatıcı
+  let k = -1; CH.forEach((c, i) => { if (now >= c.t) k = i; });
+  [...$("chap").children].forEach((li, i) => {
+    const nx = CH[i + 1]?.t ?? CH[i].t + 2, p = i < k ? 1 : i === k ? Math.min(1, (now - CH[i].t) / (nx - CH[i].t)) : 0;
+    li.className = i < k ? "ok" : i === k ? "on" : ""; li.style.setProperty("--p", p);
+  });
+  if ($("no").dataset.k == k) return; $("no").dataset.k = k;
+  $("no").textContent = String(k + 1).padStart(2, "0"); $("ct").textContent = k < 0 ? "Başlangıç" : CH[k].a;
+  $("np").textContent = k < 0 ? D.giris || D.title : D.anlati?.[CH[k].a] || "";
+}
+function seek(t) { reset(); while (ptr < D.events.length && D.events[ptr].t <= t) now = D.events[ptr].t, apply(D.events[ptr++], true); now = t; tick(0); } // aktiflik olayın kendi anına göre
+function tick(dt) {
+  now += dt;
+  while (ptr < D.events.length && D.events[ptr].t <= now) apply(D.events[ptr++], false);
+  dots = dots.filter(d => { const u = (now - d.t0) / 1.1; if (u >= 1) { d.el.remove(); return false; }
+    const v = 1 - u, x = v * v * d.p.x + 2 * v * u * d.c.x + u * u * d.q.x, y = v * v * d.p.y + 2 * v * u * d.c.y + u * u * d.q.y;
+    d.el.setAttribute("cx", x); d.el.setAttribute("cy", y); return true; });
+  let on = [];
+  for (const [k, n] of Object.entries(N)) { const a = now - n.act < 2.4; n.el.classList.toggle("on", a); if (a && !n.stn && k !== CSR) on.push(k); }
+  $("act").textContent = on.length ? `${on.length} aktif: ${on.join(", ")}` : ptr >= D.events.length ? "tamamlandı" : "bekliyor";
+  $("clk").textContent = fmt(now); chapter();
+  if (ptr >= D.events.length && running && !dots.length) play(false);
+}
+function play(v) { running = v; $("pl").textContent = v ? "⏸" : "▶"; document.body.classList.toggle("paused", !v); }
+function frame(ts) { const dt = Math.min(.1, (ts - (last ?? ts)) / 1000); last = ts; if (running) tick(dt * speed); requestAnimationFrame(frame); }
+$("pl").onclick = () => { if (!running && ptr >= D.events.length) seek(0); play(!running); };
+$("rs").onclick = $("again").onclick = () => { seek(0); play(true); };
+document.querySelectorAll("[data-s]").forEach(b => b.onclick = () => { speed = +b.dataset.s; document.querySelectorAll("[data-s]").forEach(x => x.classList.toggle("on", x === b)); });
+$("chap").onclick = e => { const li = e.target.closest("li"); if (li) { seek(CH[+li.dataset.i].t); play(true); } };
+addEventListener("keydown", e => {
+  if (e.key === " ") { e.preventDefault(); $("pl").click(); }
+  const k = CH.findLastIndex(c => c.t <= now);
+  if (e.key === "ArrowRight" && CH[k + 1]) seek(CH[k + 1].t), play(true);
+  if (e.key === "ArrowLeft") seek(CH[Math.max(0, now - (CH[k]?.t ?? 0) < 1.5 ? k - 1 : k)]?.t ?? 0), play(true);
+});
+const Q = new URLSearchParams(window.__Q || location.search);
+fetch(Q.get("data") || "bayi-telekom.json").then(r => r.json()).then(d => {
+  D = d; D.events.sort((a, b) => a.t - b.t); layout(d);
+  CH = d.events.filter(e => e.asama).map(e => ({ a: e.asama, t: e.t }));
+  $("chap").innerHTML = CH.map((c, i) => `<li data-i="${i}" title="${c.a} · ${fmt(c.t)}"><span>${i + 1}. ${c.a}</span><i></i></li>`).join("");
+  if (Q.has("t")) { seek(+Q.get("t")); play(false); } else { reset(); }
+  window.__check = () => ({ shown, total: D.events.length }); // test: her olay ekrana işlendi mi
+  requestAnimationFrame(frame);
+});
+</script>
+</body>
+</html>

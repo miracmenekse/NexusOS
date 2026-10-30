@@ -1,0 +1,362 @@
+{
+ "title": "EtiyaCell bayi · önde CSR, arkada robot operasyon merkezi",
+ "kanal": "etiyacell-bayi",
+ "stations": {
+  "ipad": {
+   "label": "CSR iPad",
+   "icon": "📱"
+  },
+  "crm": {
+   "label": "CRM",
+   "icon": "👥"
+  },
+  "katalog": {
+   "label": "tarife kataloğu",
+   "icon": "📋"
+  },
+  "kampanya": {
+   "label": "kampanya motoru",
+   "icon": "🏷"
+  },
+  "risk": {
+   "label": "kredi / risk",
+   "icon": "🛡"
+  },
+  "sozlesme": {
+   "label": "sözleşme",
+   "icon": "✍"
+  }
+ },
+ "agents": {
+  "müşteri": {
+   "rol": "Mevcut abone, faturası yüksek, rakip teklifi var",
+   "tur": "insan"
+  },
+  "CSR": {
+   "rol": "Müşteri temsilcisi, iPad ile talebi sisteme girer",
+   "tur": "insan"
+  },
+  "orkestratör": {
+   "rol": "Talebi agent'lara dağıtır, teklifi CSR'a getirir",
+   "tur": "ana"
+  },
+  "analiz": {
+   "rol": "CRM'den kullanım ve fatura geçmişini çıkarır",
+   "tur": "agent"
+  },
+  "teklif": {
+   "rol": "Katalogdan uygun tarifeyi seçer",
+   "tur": "agent"
+  },
+  "kampanya": {
+   "rol": "İndirim önerir, marj sınırını korur",
+   "tur": "agent"
+  },
+  "risk": {
+   "rol": "Kredi skoru ve taksit uygunluğu",
+   "tur": "agent"
+  },
+  "sözleşme": {
+   "rol": "Taahhüt ve sözleşmeyi hazırlar",
+   "tur": "agent"
+  }
+ },
+ "events": [
+  {
+   "t": 3,
+   "kind": "msg",
+   "from": "müşteri",
+   "to": "CSR",
+   "text": "Merhaba, faturam 510 TL, rakip 420 TL teklif etti",
+   "asama": "Talep",
+   "kart": [
+    {
+     "id": "fatura",
+     "ad": "Bugünkü fatura",
+     "deger": "510 TL",
+     "n": 510
+    },
+    {
+     "id": "rakip",
+     "ad": "Rakip teklifi",
+     "deger": "420 TL",
+     "n": 420
+    }
+   ]
+  },
+  {
+   "t": 5,
+   "kind": "msg",
+   "from": "CSR",
+   "to": "müşteri",
+   "text": "Hemen bakalım, numaranızı alayım",
+   "reply": true
+  },
+  {
+   "t": 7,
+   "kind": "tool",
+   "agent": "CSR",
+   "station": "ipad",
+   "text": "Talep: fatura yüksek, rakip teklifi 420 TL"
+  },
+  {
+   "t": 9,
+   "kind": "msg",
+   "from": "CSR",
+   "to": "orkestratör",
+   "text": "Yeni talep: elde tutma, rakip 420 TL",
+   "asama": "Analiz"
+  },
+  {
+   "t": 10,
+   "kind": "msg",
+   "from": "orkestratör",
+   "to": "analiz",
+   "text": "Müşteriyi çöz: kullanım, fatura"
+  },
+  {
+   "t": 11,
+   "kind": "tool",
+   "agent": "analiz",
+   "station": "crm",
+   "text": "CRM: son 6 ay kullanım"
+  },
+  {
+   "t": 13,
+   "kind": "msg",
+   "from": "orkestratör",
+   "to": "risk",
+   "text": "Kredi skorunu kontrol et"
+  },
+  {
+   "t": 15,
+   "kind": "tool",
+   "agent": "risk",
+   "station": "risk",
+   "text": "Kredi skoru: 514",
+   "kart": [
+    {
+     "id": "skor",
+     "ad": "Kredi skoru",
+     "deger": "514"
+    }
+   ]
+  },
+  {
+   "t": 16,
+   "kind": "msg",
+   "from": "analiz",
+   "to": "teklif",
+   "text": "25 GB kullanıyor, ödemeler düzenli",
+   "kart": [
+    {
+     "id": "kullanim",
+     "ad": "Aylık kullanım",
+     "deger": "25 GB · ödemeler düzenli"
+    }
+   ]
+  },
+  {
+   "t": 18,
+   "kind": "tool",
+   "agent": "teklif",
+   "station": "katalog",
+   "text": "Katalog: 25 GB+ tarifeler"
+  },
+  {
+   "t": 20,
+   "kind": "msg",
+   "from": "teklif",
+   "to": "kampanya",
+   "text": "Ultra 40 GB 449 TL, rakibin altına iner mi?",
+   "asama": "Teklif",
+   "kart": [
+    {
+     "id": "tarife",
+     "ad": "Önerilen tarife",
+     "deger": "Ultra 40 GB"
+    },
+    {
+     "id": "liste",
+     "ad": "Liste fiyatı",
+     "deger": "449 TL",
+     "n": 449
+    }
+   ]
+  },
+  {
+   "t": 22,
+   "kind": "tool",
+   "agent": "kampanya",
+   "station": "kampanya",
+   "text": "%11 indirim, marj kontrolü",
+   "kart": [
+    {
+     "id": "indirim",
+     "ad": "Kampanya indirimi",
+     "deger": "%11 · marj kontrolü"
+    }
+   ]
+  },
+  {
+   "t": 23,
+   "kind": "msg",
+   "from": "risk",
+   "to": "orkestratör",
+   "text": "Skor 514: taksit yok, peşin öner",
+   "reply": true,
+   "kart": [
+    {
+     "id": "odeme",
+     "ad": "Ödeme",
+     "deger": "Peşin (taksit yok)"
+    }
+   ]
+  },
+  {
+   "t": 25,
+   "kind": "msg",
+   "from": "kampanya",
+   "to": "teklif",
+   "text": "400 TL marj içinde, onay",
+   "reply": true,
+   "kart": [
+    {
+     "id": "fiyat",
+     "ad": "Yeni aylık fiyat",
+     "deger": "400 TL",
+     "n": 400
+    }
+   ]
+  },
+  {
+   "t": 27,
+   "kind": "msg",
+   "from": "teklif",
+   "to": "orkestratör",
+   "text": "Önerim: Ultra 40 GB, 400 TL",
+   "reply": true,
+   "closes": [
+    "analiz",
+    "kampanya"
+   ]
+  },
+  {
+   "t": 29,
+   "kind": "msg",
+   "from": "orkestratör",
+   "to": "CSR",
+   "text": "Teklif hazır: Ultra 40 GB 400 TL, peşin",
+   "asama": "Sunum"
+  },
+  {
+   "t": 34,
+   "kind": "msg",
+   "from": "CSR",
+   "to": "müşteri",
+   "text": "Size özel: Ultra 40 GB, ayda 400 TL"
+  },
+  {
+   "t": 36,
+   "kind": "msg",
+   "from": "müşteri",
+   "to": "CSR",
+   "text": "Rakipten iyi, kabul ediyorum",
+   "reply": true,
+   "asama": "Onay"
+  },
+  {
+   "t": 37,
+   "kind": "tool",
+   "agent": "CSR",
+   "station": "ipad",
+   "text": "Teklif kabul edildi"
+  },
+  {
+   "t": 38,
+   "kind": "msg",
+   "from": "CSR",
+   "to": "orkestratör",
+   "text": "Müşteri kabul etti",
+   "reply": true
+  },
+  {
+   "t": 39,
+   "kind": "msg",
+   "from": "orkestratör",
+   "to": "sözleşme",
+   "text": "Sözleşme hazırla",
+   "asama": "Sözleşme"
+  },
+  {
+   "t": 41,
+   "kind": "tool",
+   "agent": "sözleşme",
+   "station": "sozlesme",
+   "text": "12 ay taahhüt sözleşmesi",
+   "kart": [
+    {
+     "id": "taahhut",
+     "ad": "Taahhüt",
+     "deger": "12 ay",
+     "n": 12
+    }
+   ]
+  },
+  {
+   "t": 43,
+   "kind": "msg",
+   "from": "sözleşme",
+   "to": "orkestratör",
+   "text": "Sözleşme hazır, e-imza bekliyor",
+   "reply": true
+  },
+  {
+   "t": 45,
+   "kind": "msg",
+   "from": "orkestratör",
+   "to": "CSR",
+   "text": "Sözleşme iPad'de, imzaya hazır"
+  },
+  {
+   "t": 50,
+   "kind": "msg",
+   "from": "CSR",
+   "to": "müşteri",
+   "text": "iPad'den imzalar mısınız?",
+   "asama": "İmza"
+  },
+  {
+   "t": 52,
+   "kind": "say",
+   "agent": "müşteri",
+   "text": "✍ İmzaladım",
+   "kart": [
+    {
+     "id": "imza",
+     "ad": "E-imza",
+     "deger": "Tamam ✓"
+    }
+   ]
+  },
+  {
+   "t": 53,
+   "kind": "sonuc",
+   "agent": "orkestratör",
+   "text": "satış",
+   "ok": true,
+   "asama": "Satış"
+  }
+ ],
+ "giris": "Bir abone rakibe gitmek üzere. Temsilcinin yanında, arka planda 5 yapay zekâ agent'ı ve bir orkestratör çalışıyor.",
+ "anlati": {
+  "Talep": "Müşteri faturasının yüksek olduğunu, rakibin daha ucuz teklif verdiğini söylüyor. Temsilci talebi iPad'e giriyor.",
+  "Analiz": "Orkestratör işi bölüyor: analiz agent'ı CRM'den kullanım geçmişini, risk agent'ı kredi skorunu aynı anda çekiyor.",
+  "Teklif": "Teklif agent'ı kullanıma uyan tarifeyi seçiyor; kampanya agent'ı rakibin altına inmek için indirimi marj sınırı içinde onaylıyor.",
+  "Sunum": "Hazır teklif temsilcinin ekranına düşüyor; temsilci müşteriye tek cümleyle sunuyor.",
+  "Onay": "Müşteri teklifi kabul ediyor; karar anında sisteme işleniyor.",
+  "Sözleşme": "Sözleşme agent'ı 12 aylık taahhüt sözleşmesini hazırlayıp temsilcinin iPad'ine gönderiyor.",
+  "İmza": "Müşteri sözleşmeyi iPad üzerinden e-imzayla onaylıyor.",
+  "Satış": "Abone elde tutuldu: müşteri rakibe gitmedi, bayi satışı kapattı."
+ }
+}

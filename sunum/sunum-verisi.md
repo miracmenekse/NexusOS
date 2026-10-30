@@ -4,13 +4,16 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 
 ## 1. Hikâye
 
+> **Biçim (2026-10-13):** Slayt yok. Tüm sunum Manus vr-showcase mantığında tıklanabilir bir web sayfası; aşağıdaki bölümler sayfanın bölümleri.
+
 1. **Kıvılcım:** NexusOS, Metaverse dersinde (Doç. Dr. Murat Yılmaz) doğan, TÜBİTAK 1002-A'ya yazılan "VR'da yazılım geliştirme" fikri.
 2. **Problem:** Yazılım, dağıtık servisler ve agent'lar görünmez; geliştirici 2B ekranda bağlam kaybediyor, bilişsel yük artıyor.
-3. **Yön:** VR değil; dijital ikiz, görsellik, konuşarak ve dokunarak, az tuşla etkileşim. Ar-Ge projesinin yeni çıktıları.
+3. **Yön:** VR değil; dijital ikiz, görsellik, konuşarak ve dokunarak, az tuşla etkileşim. Ar-Ge projesinin yeni çıktıları. Sayfada sekiz yetenek kartı, yönetici dilinde: iş değeri, çalışma mantığı, esin kaynağı (2026-10-14).
 4. **Dünyada ne var:** üç ayrı görsel dil (kod mekânı, akan trafik, yaşayan agent'lar); üçünü birleştiren yok.
+4b. **Showcase (Manus vr-showcase kart mantığı):** önce dünyadaki araştırma ve çözümler, sonra aynı kart biçiminde bizim Ç1/Ç2/Ç3 demolarımız. Kart: ad + tek cümle, ekran görüntüleri, hedef kitle, ne çözüyor, kaynak (yıl/yıldız/lisans ya da makale), konum. Rakip kartları §3 Referans projeler'den (ExplorViz, CodeCharta, SEE, Vizceral, AI Town, agent-flow, Pixel Agents, deskrpg) ve literatürden; görselleri toplanacak. Biçim örneği: `kaynaklar/manus/vr-showcase/`. Manus'un fon/haber satırları doğrulanmadan kullanılmaz.
 5. **Çıktılarımız:** Ç1 Kod mekânı · Ç2 Servis trafiği · Ç3 Yaşayan agent'lar (ayrı ayrı demolar).
 6. **Demo:** 3-4 mikroservisli örnek sistem; Ç1 Neon kod şehri (ExplorViz ile başlandı, kendi hafif görünümümüze geçildi), Ç2 akan trafik, Ç3 agent görünümleri.
-7. **Sonraki adımlar:** Ç3 için yeniden kullanılabilir agent görselleştirme altlığı, Neon şehri gerçek koda bağlama, Ar-Ge projesine bağlanma. Ses + dokunma katmanı daha sonra (d20).
+7. **Sonraki adımlar:** konuşarak hata çözme demosu (conversational AI + DBeaver + kod görselleştirme; kullanıcı notu 2026-10-13), 5+5 kullanıcı testi, ses + dokunma katmanı (d20), Ç1 ile Ç3 aynı sahnede, şirket Ar-Ge projesine eşleme (Rovo, sayfada boş bölüm), lisans teyitleri, ölçek. (Altlık ve Neon-gerçek kod bitti.)
 
 ## 2. Kayıtlar
 
@@ -175,6 +178,13 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - **Sunumda:** 6. Demo; canlıda "payments yavaşlasın" → 10 sn sonra alarm, kök neden payments → temizle → alarm kapanır.
 - **İz:** WBS 6.17, d26
 
+### 2026-10-13 · Bayi satış asistanı: modern görünüm (2. alternatif)
+- **Ne:** Aynı EtiyaCell bayi senaryosu üç panelli modern bir görünümle oynatılıyor: solda temsilcinin iPad'i (müşteri konuşması + asistan önerileri), ortada agent ekibi ağı (temsilci → orkestratör → 5 agent → kullandıkları sistemler, akan mesaj ışıkları), sağda adım adım dolan teklif kartı (510 → rakip 420 → liste 449, %11 indirim → 400 TL). Altta anlatıcı bandı her aşamayı bir cümleyle anlatıyor; sonda özet ekranı açılıyor. Aşamaya tıklayınca o ana atlanıyor.
+- **Neden önemli:** Sahne yerine "ne oldu, neden, müşteriye ne kazandırdı" doğrudan okunuyor; telekom müşterisine/yöneticiye anlatmaya uygun. Tek model, çok görünüm ilkesinin bir kanıtı daha: aynı JSON, yeni sayfa.
+- **Kanıt:** `demo/agents/bayi2.html`, `demo/agents/bayi-telekom.json` (giris/anlati/kart alanları), `gorseller/2026-10-13-c3-bayi2-modern.png`, `gorseller/2026-10-13-c3-bayi2-ozet.png`; vitrin "Bayi satış asistanı → Modern görünüm".
+- **Sunumda:** 5. Bizim çözümlerimiz / Ç3 demo; canlıda oynat, "3. Teklif"e tıklayıp indirim kararını göster, sonda özet: 110 TL/ay tasarruf, rakipten 20 TL ucuz.
+- **İz:** Ç3, bayi demosu alternatifi
+
 ## 3. Referans projeler
 
 | Proje | ★ / lisans / son (2026-10-11) | Ne aldık | Çıktı |
@@ -195,6 +205,11 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 | 96 literatür kaynağı | `kaynaklar/notebooklm/notebooklm1.md` |
 | 6 rakip VR/web IDE'nin hiçbirinde AST tabanlı kod görselleştirme yok | `kaynaklar/manus/Rekabet Analizi - Detaylı Araştırma.md` |
 | LLM destekli pencere yönetimi (DuoZone, N=16): görev %34,5 daha hızlı, bilişsel yük (NASA-TLX) ~1/3 daha düşük. Taslaktaki "%34 bilişsel yük" ifadesi yanlış birleştirilmiş | `kaynaklar/notebooklm/2026-10-11-ses-dokunma-hci.md` (Qian vd. 2025, §7.1, §8.1) |
+| CodeCity: kontrollü deneyde (41 katılımcı) Eclipse + Excel'e göre %24 daha doğru, %12 daha hızlı | Wettel, Lanza, Robbes, ICSE 2011 |
+| ExplorViz: Extravis'e göre %39–61 daha doğru, büyük sistemde %28 daha az süre | Fittkau vd., ICPC 2015 |
+| SecCityVR: SUS 70'e 58,75; hayal kırıklığı (TLX) 17,5'e 52,5; görev süresi daha uzun (17 katılımcı) | arXiv:2504.18238 |
+| DuoZone: %34,5 daha hızlı; uygulama önerilerinin %90+'ı, düzen önerilerinin %82,8'i kabul (16 uzman) | arXiv:2511.15676 |
+| Generative Agents (AI Town'ın esin kaynağı): %1,3 halüsinasyon, ağ yoğunluğu 0,17 → 0,74 | Park vd., UIST 2023 |
 | Bilgi grafiği: 176 düğüm, 343 kenar, 12 topluluk | `graphify-out/GRAPH_REPORT.md` |
 
 ## 5. Görseller
@@ -217,6 +232,8 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 | `sunum/gorseller/2026-10-13-c3-takilma-ag.png` | Ç3 ağ: takılma uyarısı ve kampanya ayrıntı paneli |
 | `sunum/gorseller/2026-10-13-c3-takilma-ofis.png` | Ç3 ofis: agent şeridi, takılma uyarısı, turuncu halka |
 | `sunum/gorseller/2026-10-13-c3-canli-oturum.png` | Ç3 canlı: bu Claude Code oturumu ofiste (iç bilgi içerir, ayıklanmadan kullanma) |
+| `sunum/gorseller/2026-10-13-c3-bayi2-modern.png` | Ç3 bayi modern görünüm: iPad, agent ağı, dolan teklif kartı |
+| `sunum/gorseller/2026-10-13-c3-bayi2-ozet.png` | Ç3 bayi modern görünüm: satış özeti (tasarruf, süre, agent sayısı) |
 | `graphify-out/graph.html` | Bilgi grafiği (ekran görüntüsü alınacak) |
 
 ## 6. Dikkat
@@ -229,3 +246,31 @@ Bakım: `nexusos-sunum` skill'i. Panel: https://claude.ai/artifact/DDmawF2kHNmhv
 - Ç3 demosu oturum kaydındaki kullanıcı mesajlarını ve komut özetlerini gösterir; sunumdan önce oynatılacak oturumu gözden geçir (iç bilgi, kişi adı).
 - **Sprite görselleri** (`demo/agents/px/`): pixel-agents deposu MIT ama görsellerin kökeni (YZ üretimi?) belirsiz; ticari kullanımdan önce netleştirilmeli (r10).
 - Luma/Kling videoları YZ üretimi; "ürün görüntüsü" diye sunulmaz, "esin/konsept" diye sunulur.
+
+### 2026-10-13 · Sunum biçimi: tıklanabilir showcase sayfası
+- **Ne:** Slayt yok; sunum Manus vr-showcase mantığında bir web sayfası. Önce dünyadaki araştırma ve çözümler kart kart, sonra aynı biçimde Ç1/Ç2/Ç3. 8 referans projenin ekran görüntüleri README'lerinden indirildi (ExplorViz için kendi kurulum görüntümüz).
+- **Neden önemli:** Dinleyici her çözümü tıklayıp inceleyebiliyor; bizim demolar rakiplerle aynı çerçevede karşılaştırılıyor.
+- **Kanıt:** `gorseller/referans/*.png`, `kaynaklar/manus/vr-showcase/`
+- **Sunumda:** 4b. Showcase.
+- **İz:** kullanıcı kararı
+
+### 2026-10-13 · Sunum sayfası ön çalışması yayında
+- **Ne:** Mentör sunumunun ilk sürümü: https://claude.ai/artifact/PVNuXaTyBDeHLNMKQX4eGD. Kıvılcım → Problem → Yön (8 ilke) → Dünyada ne var (12 kart: 8 araç + 4 araştırma, filtreli) → Bizim çözümlerimiz (Ç1/Ç2/Ç3 kartları, 7 canlı demo düğmesi) → Şirket Ar-Ge (boş, "sonradan yapılacaktır") → Sonraki adımlar.
+- **Neden önemli:** Sunumun kendisi; demolar panodaki tarayıcı içi simülasyonla sayfanın içinde çalışıyor.
+- **Kanıt:** `sunum/web/index.html` (yayın `files` haritası: img/ yerelden, demo/ panodan)
+- **Sunumda:** tümü.
+- **İz:** kullanıcı kararı (dinleyici: şirket içi Ar-Ge mentörleri)
+
+### 2026-10-13 · Sunum sayfası 2. sürüm: sayfa sayfa, araştırma kartları, VR sekmesi
+- **Ne:** Solda içindekiler paneli, her bölüm tam ekran bir sayfa, kaydırınca sonraki sayfaya geçiyor. Kıvılcım'da Luma videosu doğrudan oynatılıyor. ExplorViz kartında kendi şehrimizin ExplorViz görüntüsü ve mimari görseli var. Araştırma kartları amaç / literatüre katkı / çıktı / performans / teknoloji alanlarıyla (SecCityVR, DuoZone, Saktheeswaran vd. 2020, Hey Dashboard!, CodeCity; arXiv özetlerinden). Yeni sekme "VR çalışma alanları": Manus'un 6 ürünü kendi biçimiyle (fon, pazar ve haberler "doğrulanmamış" etiketli). Demo kartlarında "Nasıl kullanılır" adımları, demo açıkken üst bantta da görünüyor. 3. sürüm: 4. kart EtiyaCell bayi satış asistanı (`demo/agents/bayi.html`); demolar ekrana sığacak şekilde küçültülüyor, demo düğmeleri kartın üstünde sabit.
+- **Neden önemli:** Mentörler her bölümü ayrı bir sayfa gibi geziyor; araştırmalar karşılaştırılabilir biçimde.
+- **Kanıt:** `sunum/web/index.html`, `sunum/web/manus.json`, `sunum/web/medya/luma.mp4`
+- **Sunumda:** tümü.
+- **İz:** kullanıcı geri bildirimi
+
+### 2026-10-14 · Yön bölümü yönetici diliyle: 8 yetenek kartı + giriş diyagramı
+- **Ne:** "3 · Yön" sekiz yetenek kartına dönüştü (sorun kendini gösterir, alarmdan koda iki dokunuş, gördüğünüz her şey gerçektir, tek veri her role kendi ekranı, konuşarak ve dokunarak sorma, sesin sessiz karşılığı, açıklama bakışı kapatmaz, klavyesiz kullanım). Her kartta bir görsel; karta basınca detay: yönetici için değeri, nasıl çalışıyor, nereden esinlendik (Vizceral, CodeCity, CodeCharta, ExplorViz, agent-flow, Pixel Agents, DuoZone, Saktheeswaran vd. 2020, Hey Dashboard!), nerede görülür. Altı kartta canlı demo düğmesi; ses kartları "sonraki aşama" etiketli, görseli konsept çizimi. Giriş görseli "üç kaynak → tek veri modeli → üç canlı görünüm" diyagramıyla değişti.
+- **Neden önemli:** Yöneticiler özelliği iş sorusu olarak okuyor; her yetenek kaynağına ve çalışma mantığına bağlı. Ses yeteneklerinin henüz yapılmadığı açıkça yazılı.
+- **Kanıt:** `sunum/web/index.html` (yeni görsel `img/c3-canli-oturum.png` = `gorseller/2026-10-13-c3-canli-oturum.png`)
+- **Sunumda:** 1. Giriş, 3. Yön.
+- **İz:** kullanıcı isteği

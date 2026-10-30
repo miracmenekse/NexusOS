@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>EtiyaCell Bayi</title>
+<style>
+  /* Etiya brand book: turuncu #F58220, lacivert #242441 */
+  :root { --or:#F58220; --nv:#242441; --nv2:#171735; --fg:#eef0f7; --dim:#9aa0bd; --line:#34345a; color-scheme:dark; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--nv2); color:var(--fg); font:14px/1.45 system-ui,sans-serif; padding:14px; }
+  .win { max-width:1320px; margin:auto; background:var(--nv); border:1px solid var(--line); border-radius:12px; overflow:hidden; }
+  .bar { display:flex; align-items:center; gap:8px; padding:8px 12px; border-bottom:1px solid var(--line); }
+  .bar b { color:var(--or); letter-spacing:.08em; }
+  .bar span { flex:1; color:var(--dim); font-size:12px; }
+  .bar button, .bar select { background:var(--nv2); color:var(--fg); border:1px solid var(--line); border-radius:6px; padding:3px 9px; font:inherit; font-size:12px; cursor:pointer; }
+  .body { display:grid; grid-template-columns:minmax(0,1fr) 320px; }
+  @media (max-width:900px) { .body { grid-template-columns:1fr; } #log { height:300px; } }
+  #st { position:relative; aspect-ratio:3/2; }
+  canvas { position:absolute; inset:0; width:100%; height:100%; }
+  .bub { position:absolute; transform:translate(-50%,-100%); max-width:260px; font-weight:500; background:#fff; color:var(--nv); border:2px solid var(--c); border-radius:10px; padding:6px 10px; font-size:14px; pointer-events:none; z-index:5; }
+  .bub.tl { border-style:dashed; background:#fff7ef; }
+  .nt { position:absolute; transform:translate(-50%,0); font:600 11px system-ui; padding:0 6px; border-radius:6px; background:var(--nv2); color:var(--c); border:1px solid var(--c); white-space:nowrap; pointer-events:none; }
+  #log { border-left:1px solid var(--line); overflow:auto; padding:8px 10px; height:0; min-height:100%; }
+  .m { margin:6px 0; font-size:13px; overflow-wrap:anywhere; }
+  .m b { color:var(--c); } .m i { color:var(--dim); font-style:normal; font-size:11px; margin-left:4px; }
+  .m.tool { color:var(--dim); font-style:italic; }
+  #asama { display:flex; flex-wrap:wrap; gap:4px; margin:0; padding:8px 12px; list-style:none; border-bottom:1px solid var(--line); counter-reset:a; }
+  #asama li { flex:1; min-width:70px; text-align:center; padding:5px 4px; font-size:12px; font-weight:600; color:var(--dim); background:var(--nv2); border-radius:4px; }
+  #asama li.ok { color:#fff; background:#3a3a66; } #asama li.on { color:var(--nv); background:var(--or); }
+  .pill { text-align:center; margin:8px 0; color:var(--or); font-weight:700; }
+</style>
+</head>
+<body>
+<div class="win">
+  <div class="bar"><b>ETIYACELL</b><span id="baslik"></span>
+    <button id="pl">⏸</button><button id="rs">⏮</button>
+    <select id="sp"><option value="1">1×</option><option value="2" selected>2×</option><option value="4">4×</option></select></div>
+  <ol id="asama"></ol>
+  <div class="body"><div id="st"><canvas id="cv" width="1200" height="800"></canvas></div><div id="log"></div></div>
+</div>
+<script>
+// Bayi: önde mağaza (CSR + müşteri ayakta masada), camın arkasında agent fabrikası. Model: altlik.py biçimi.
+// Agent'lar yürür; insanlar yerinde konuşur, CSR'ın iPad'den gönderdiği talep fabrikaya ışık paketi olarak uçar.
+const $ = id => document.getElementById(id), cv = $("cv").getContext("2d"), st = $("st"), W = 1200, H = 800;
+const OR = "#F58220", NV = "#242441", GLASS = 345, DOOR = { x: 600, y: GLASS };
+const TABLE = { x: 600, y: 600 }, SKINS = ["dev-1", "employee-2", "security-audit-1", "Frontend-dev-1", "dev-2", "employee-3"];
+const PAL = ["#4fd1ff", "#6ee7a0", "#c792ea", "#ffd166", "#56d4bc", "#ff9fb2"];
+const IMG = {}, face4 = ["front-left", "front-right", "rear-left", "rear-right"];
+const imgs = ["explore-1", "employee-1", "Claude-1", ...SKINS].flatMap(s => face4.map(f => `${s}-${f}.png`));
+const loaded = Promise.all(imgs.map(n => new Promise(r => { const i = new Image(); i.onload = i.onerror = r; i.src = "px/" + n; IMG[n] = i; })));
+
+let D, A, ST, evs, ptr, now, running = true, last, packets, banner, flows, HUB, focus = 1, dim = 0;
+function build(d) {
+  D = d; A = {}; ST = {}; now = 0; ptr = 0; packets = []; banner = null; flows = []; focus = 1; stages();
+  st.querySelectorAll(".bub,.nt").forEach(e => e.remove()); $("log").innerHTML = ""; $("baslik").textContent = d.title;
+  const ag = Object.entries(d.agents).filter(([, x]) => x.tur === "agent");
+  const stIds = Object.keys(d.stations).filter(s => s !== "ipad");
+  stIds.forEach((s, i) => ST[s] = { x: 170 + i * (860 / Math.max(1, stIds.length - 1)), y: 235, glow: 0 });
+  let i = 0;
+  for (const [a, x] of Object.entries(d.agents)) {
+    let home, skin, col;
+    if (a === "CSR" || /temsilci/i.test(x.rol)) home = { x: TABLE.x + 70, y: TABLE.y + 10 }, skin = "employee-1", col = OR;
+    else if (x.tur === "insan") home = { x: TABLE.x - 70, y: TABLE.y + 10 }, skin = "explore-1", col = "#ffd166";
+    else if (x.tur === "ana") HUB = a, home = { x: 492, y: 328 }, skin = "Claude-1", col = OR;
+    else { // agent: ilk kullandığı istasyonun önünde durur
+      const s = d.events.find(e => e.kind === "tool" && e.agent === a)?.station;
+      home = ST[s] ? { x: ST[s].x, y: 310 } : { x: 130 + i * 160, y: 310 }; skin = SKINS[i % SKINS.length]; col = PAL[i % PAL.length]; i++;
+    }
+    const start = x.tur === "insan" && skin === "explore-1" ? { x: 600, y: 790 } : home; // müşteri kapıdan girer
+    A[a] = { name: a, insan: x.tur === "insan", home, x: start.x, y: start.y, path: start === home ? [] : [home], q: [], cur: null, t: 0, face: "rear-left", skin, col, step: 0 };
+    const el = document.createElement("div"); el.className = "nt"; el.style.setProperty("--c", col); el.textContent = a; st.append(el); A[a].nt = el;
+  }
+  evs = d.events.map(e => ({ ...e }));
+  pill("🏬 EtiyaCell bayisi açık");
+}
+const zone = p => p.y < GLASS ? 0 : 1;
+function go(r, to) { r.path = zone(r) !== zone(to) ? [{ x: DOOR.x, y: DOOR.y + (zone(r) ? 25 : -25) }, { x: DOOR.x, y: DOOR.y + (zone(r) ? -25 : 25) }, to] : [to]; }
+function spotNear(t, r) { const o = A[t]; return { x: o.x + (r.x < o.x ? -55 : 55), y: o.y + 6 }; }
+function say(a, text, cls) {
+  A[a].bub?.el.remove(); const el = document.createElement("div"); el.className = "bub " + (cls || "");
+  el.style.setProperty("--c", A[a].col); el.textContent = text; st.append(el); A[a].bub = { el, until: now + 3.2 };
+}
+function stages(cur) { // yönetim için aşama çubuğu
+  const all = D.events.filter(e => e.asama).map(e => e.asama), k = cur ? all.indexOf(cur) : -1;
+  $("asama").innerHTML = all.map((a, i) => `<li class="${i < k ? "ok" : i === k ? "on" : ""}">${a}</li>`).join("");
+}
+function pill(t) { const d = document.createElement("div"); d.className = "pill"; d.textContent = t; $("log").append(d); $("log").scrollTop = 1e5; }
+function log(a, to, text, tool) {
+  const l = document.createElement("div"); l.className = "m" + (tool ? " tool" : ""); l.style.setProperty("--c", A[a].col);
+  l.innerHTML = `<b>${a}</b><i>${Math.floor(now / 60)}:${String(Math.floor(now % 60)).padStart(2, "0")}</i><br>${to ? `<span style="color:${A[to].col}">@${to}</span> ` : ""}${text}`;
+  $("log").append(l); $("log").scrollTop = 1e5;
+}
+function act(r, e) { // varınca: konuş / araç kullan
+  focus = zone(r); if (e.asama) stages(e.asama);
+  if (e.kind === "msg") flows.push({ from: r.name, to: e.to, col: r.col, until: now + 3 }), flows = flows.filter(f => f.until > now);
+  if (e.kind === "msg") { say(r.name, e.text); log(r.name, e.to, e.text); if (r.insan && !A[e.to].insan) packets.push({ x: r.x, y: r.y - 50, to: e.to, col: r.col }); }
+  else if (e.kind === "tool") { say(r.name, "🔧 " + e.text, "tl"); log(r.name, null, `${D.stations[e.station].icon} ${e.text}`, true); if (ST[e.station]) ST[e.station].glow = 3; }
+  else if (e.kind === "say") { say(r.name, e.text); log(r.name, null, e.text); }
+  else if (e.kind === "sonuc") { banner = (e.ok ? "✅ " : "❌ ") + e.text; pill(banner); }
+}
+function step(r, dt) {
+  if (r.path.length) { // yürü
+    const p = r.path[0], dx = p.x - r.x, dy = p.y - r.y, d = Math.hypot(dx, dy), v = 230 * dt;
+    if (dx || dy) r.face = (dy < 0 ? "rear-" : "front-") + (dx < 0 ? "left" : "right");
+    if (d <= v) { r.x = p.x; r.y = p.y; r.path.shift(); } else { r.x += dx / d * v; r.y += dy / d * v; r.step += dt * 12; }
+    return;
+  }
+  if (r.cur) { if ((r.t -= dt) <= 0) r.cur = null; return; }
+  const e = r.q.shift();
+  if (!e) { if (Math.hypot(r.x - r.home.x, r.y - r.home.y) > 2) go(r, r.home); else r.face = r.insan ? (r.x < TABLE.x ? "rear-right" : "rear-left") : "front-left"; return; }
+  r.cur = e; r.t = 2.4;
+  if (e.kind === "msg" && !r.insan && !A[e.to].insan || e.kind === "msg" && !r.insan && A[e.to].insan) { go(r, spotNear(e.to, r)); r.path.push({ act: e }); }
+  else if (e.kind === "tool" && ST[e.station]) { go(r, { x: ST[e.station].x, y: 310 }); r.path.push({ act: e }); }
+  else act(r, e);
+}
+function sim(dt) {
+  now += dt;
+  while (ptr < evs.length && evs[ptr].t <= now) { const e = evs[ptr++]; A[e.kind === "msg" ? e.from : e.agent].q.push(e); }
+  for (const r of Object.values(A)) {
+    if (r.path[0]?.act) { act(r, r.path.shift().act); r.t = 2.4; continue; }
+    step(r, dt);
+  }
+  packets = packets.filter(p => { const o = A[p.to], dx = o.x - p.x, dy = o.y - 60 - p.y, d = Math.hypot(dx, dy); if (d < 12) return false; p.x += dx / d * 420 * dt; p.y += dy / d * 420 * dt; return true; });
+  for (const s of Object.values(ST)) s.glow = Math.max(0, s.glow - dt);
+  return ptr === evs.length && Object.values(A).every(r => !r.cur && !r.q.length && !r.path.length);
+}
+
+// ---- sahne ----
+const rr = (x, y, w, h, r, f) => { cv.beginPath(); cv.roundRect(x, y, w, h, r); cv.fillStyle = f; cv.fill(); };
+const poly = (pts, f) => { cv.beginPath(); pts.forEach(([x, y], i) => i ? cv.lineTo(x, y) : cv.moveTo(x, y)); cv.closePath(); cv.fillStyle = f; cv.fill(); };
+const txt = (t, x, y, font, f, al = "center") => { cv.font = font; cv.fillStyle = f; cv.textAlign = al; cv.fillText(t, x, y); cv.textAlign = "left"; };
+function logo(x, y, s) { // Etiya "E": yükselen basamaklar, %100 / %60 / %30
+  [1, .6, .3].forEach((o, i) => { cv.globalAlpha = o; rr(x + i * s * .45, y - i * s * .45, s * 1.4, s * .32, s * .16, OR); }); cv.globalAlpha = 1;
+}
+// piksel robot (12x15): b gövde, d koyu, v vizör, e göz, a anten ışığı, w kol
+const ROBOT = [".....a......", ".....d......", "..bbbbbbbb..", ".bbbbbbbbbb.", ".bvvvvvvvvb.", ".bveevveevb.", ".bvvvvvvvvb.", "..bbbbbbbb..",
+  "....dddd....", ".wbbbbbbbbw.", "wwbbddddbbww", "w.bbbbbbbb.w", "..bbbbbbbb..", "..dd....dd..", "..dd....dd.."];
+function robot(r, px, py, sc) {
+  const rear = r.face.startsWith("rear"), walk = r.path.length && Math.sin(r.step) > 0, blink = Math.sin(now * 2 + r.x) > .97;
+  const C = { b: r.col, d: "#2b2b4a", v: rear ? r.col : "#141428", e: blink ? "#141428" : "#9ff3ff", a: r.cur ? OR : "#ffffff88", w: "#c8cce0" };
+  ROBOT.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === ".") return; if (rear && ch === "e") ch = "b";
+    const leg = y >= 13 && walk ? (x < 6 ? -1 : 1) : 0; // yürürken bacaklar sırayla kalkar
+    cv.fillStyle = C[ch]; cv.fillRect(px + (x - 6) * sc, py + (y - 15 + (y >= 13 ? leg * .5 : 0)) * sc, sc, sc);
+  }));
+}
+const VP = { x: 600, y: -420 }; // kaçış noktası: zemin çizgileri buna yakınsar
+function persp(y0, y1, n, col) {
+  cv.strokeStyle = col; cv.lineWidth = 1;
+  for (let i = -n; i <= n; i++) { const x = 600 + i * 80; cv.beginPath(); cv.moveTo(VP.x + (x - VP.x) * (y0 - VP.y) / (H - VP.y), y0); cv.lineTo(x * 1.6 - 360, y1); cv.stroke(); }
+}
+function opsCenter() {
+  const g = cv.createLinearGradient(0, 0, 0, GLASS); g.addColorStop(0, "#0d0d22"); g.addColorStop(1, "#1d1d3c");
+  cv.fillStyle = g; cv.fillRect(0, 0, W, GLASS);
+  poly([[0, 160], [W, 160], [W, GLASS], [0, GLASS]], "#16162e"); persp(160, GLASS, 9, "#ffffff10");   // zemin
+  for (let y = 190; y < GLASS; y += 34) { cv.strokeStyle = "#ffffff0a"; cv.beginPath(); cv.moveTo(0, y); cv.lineTo(W, y); cv.stroke(); }
+  poly([[0, 0], [90, 0], [90, 160], [0, GLASS]], "#121228"); poly([[W, 0], [W - 90, 0], [W - 90, 160], [W, GLASS]], "#121228"); // yan duvarlar
+  // tavan ışık şeritleri
+  for (const x of [200, 600, 1000]) { cv.fillStyle = "#9ff3ff22"; cv.fillRect(x - 90, 4, 180, 3); }
+  // dev duvar ekranı: canlı agent ağı
+  rr(250, 16, 700, 128, 8, "#05050f"); rr(256, 22, 688, 116, 6, "#101030");
+  txt("ETİYACELL OPERASYON MERKEZİ", 600, 40, "700 14px system-ui", "#fff"); logo(270, 40, 12);
+  const robots = Object.values(A).filter(r => !r.insan), n = robots.length;
+  const pos = Object.fromEntries(robots.map((r, i) => [r.name, [330 + i * (540 / (n - 1)), r === A[HUB] ? 72 : 100]]));
+  for (const m of flows) { const a = pos[m.from], b = pos[m.to]; if (!a || !b) continue;
+    cv.strokeStyle = m.col; cv.globalAlpha = Math.min(1, m.until - now); cv.lineWidth = 3; cv.beginPath(); cv.moveTo(...a); cv.lineTo(...b); cv.stroke(); cv.globalAlpha = 1; cv.lineWidth = 1; }
+  for (const r of robots) { const [x, y] = pos[r.name], on = !!r.cur;
+    cv.fillStyle = on ? r.col : "#2b2b4a"; cv.shadowColor = r.col; cv.shadowBlur = on ? 16 : 0; cv.beginPath(); cv.arc(x, y, 8, 0, 7); cv.fill(); cv.shadowBlur = 0;
+    txt(r.name, x, y + 22, "600 10px system-ui", on ? "#fff" : "#8a8fb0"); }
+  txt(`● ${robots.length} robot çevrim içi`, 930, 132, "600 10px system-ui", "#6ee7a0", "right");
+  txt(banner ? "Talep kapandı" : ptr ? "1 aktif talep" : "Talep bekleniyor", 270, 132, "600 10px system-ui", OR, "left");
+  // konsollar
+  for (const [id, s] of Object.entries(ST)) {
+    const on = s.glow > 0, x = s.x, y = s.y;
+    poly([[x - 62, y], [x + 62, y], [x + 70, y + 26], [x - 70, y + 26]], "#2d2d52"); poly([[x - 70, y + 26], [x + 70, y + 26], [x + 70, y + 36], [x - 70, y + 36]], "#1a1a36");
+    rr(x - 40, y - 46, 80, 46, 4, "#05050f"); rr(x - 36, y - 42, 72, 38, 3, on ? OR : "#1b2a4a");
+    if (on) { cv.fillStyle = "#F5822033"; cv.beginPath(); cv.ellipse(x, y + 60, 90, 22, 0, 0, 7); cv.fill(); }
+    txt(D.stations[id].icon, x, y - 16, "20px system-ui", "#fff"); txt(D.stations[id].label, x, y - 52, "600 11px system-ui", on ? "#fff" : "#aab0cc");
+  }
+}
+function store() {
+  const g = cv.createLinearGradient(0, GLASS, 0, H); g.addColorStop(0, "#b08a5e"); g.addColorStop(1, "#d8b88c");
+  cv.fillStyle = g; cv.fillRect(0, GLASS, W, H - GLASS); persp(GLASS, H, 9, "#00000018");
+  for (let y = GLASS + 20, k = 16; y < H; y += k, k += 3) { cv.strokeStyle = "#00000012"; cv.beginPath(); cv.moveTo(0, y); cv.lineTo(W, y); cv.stroke(); }
+  // sol duvar: aksesuar duvarı (perspektifli)
+  poly([[0, GLASS], [150, GLASS + 30], [150, H - 120], [0, H]], "#efe7da");
+  const acc = [OR, NV, "#fff", "#7a7aa8"];
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 6; c++) {
+    const t = c / 6, x = 10 + c * 23, y0 = GLASS + 18 + t * 26, y1 = H - 20 - t * 100, y = y0 + (y1 - y0) * r / 9;
+    rr(x, y, 14, 20 - t * 4, 2, acc[(r + c) % 4]);
+  }
+  // sağ duvar + ödeme noktası (3B kutu)
+  poly([[W, GLASS], [W - 110, GLASS + 30], [W - 110, H - 120], [W, H]], "#2f2f55");
+  poly([[W - 340, 430], [W - 140, 430], [W - 120, 452], [W - 360, 452]], "#3a3a66");
+  poly([[W - 360, 452], [W - 120, 452], [W - 120, 530], [W - 360, 530]], NV); cv.fillStyle = OR; cv.fillRect(W - 360, 518, 240, 12);
+  txt("ÖDEME NOKTASI", W - 240, 495, "700 17px system-ui", "#fff"); logo(W - 268, 478, 11);
+  // teşhir masası
+  poly([[250, 430], [500, 430], [520, 456], [230, 456]], "#fff");
+  poly([[230, 456], [520, 456], [520, 490], [230, 490]], "#e7e2da"); cv.fillStyle = OR; cv.fillRect(230, 484, 290, 6);
+  for (let x = 262; x < 490; x += 28) rr(x, 434, 14, 18, 2, "#1b1b38");
+  // lamba ışığı + halka lambalar
+  for (const [x, y, w] of [[375, 470, 90], [TABLE.x, 600, 110], [900, 640, 80]]) {
+    const l = cv.createRadialGradient(x, y, 0, x, y, w * 1.3); l.addColorStop(0, "#fff6e066"); l.addColorStop(1, "#fff6e000");
+    cv.fillStyle = l; cv.beginPath(); cv.ellipse(x, y, w * 1.3, w * .5, 0, 0, 7); cv.fill();
+  }
+  // bekleme masası (CSR görüşmesi)
+  cv.fillStyle = "#00000025"; cv.beginPath(); cv.ellipse(TABLE.x, TABLE.y + 30, 62, 16, 0, 0, 7); cv.fill();
+  rr(TABLE.x - 6, TABLE.y - 20, 12, 50, 4, OR);
+  cv.fillStyle = OR; cv.beginPath(); cv.ellipse(TABLE.x, TABLE.y - 22, 56, 18, 0, 0, 7); cv.fill();
+  cv.fillStyle = "#fff"; cv.beginPath(); cv.ellipse(TABLE.x, TABLE.y - 25, 51, 15, 0, 0, 7); cv.fill();
+  rr(TABLE.x + 10, TABLE.y - 34, 26, 18, 3, "#1b1b38"); rr(TABLE.x + 12, TABLE.y - 32, 22, 14, 2, A.CSR?.cur ? "#9ff3ff" : "#3a4a7a");
+  for (const [x, y] of [[880, 660], [950, 710], [380, 700], [300, 640]]) { rr(x - 3, y - 22, 6, 32, 2, "#9a9aa8"); cv.fillStyle = OR; cv.beginPath(); cv.ellipse(x, y - 24, 20, 8, 0, 0, 7); cv.fill(); }
+  // giriş
+  rr(520, H - 18, 160, 18, 4, NV); txt("GİRİŞ", 600, H - 5, "700 11px system-ui", "#fff");
+}
+function glass() { // cam bölme: çerçeve, yansıma, kapı
+  cv.fillStyle = "#9fd8ff18"; cv.fillRect(0, GLASS - 14, W, 28);
+  cv.strokeStyle = "#ffffff30"; cv.lineWidth = 2; for (let x = -40; x < W; x += 140) { cv.beginPath(); cv.moveTo(x, GLASS + 14); cv.lineTo(x + 40, GLASS - 14); cv.stroke(); }
+  cv.fillStyle = NV; cv.fillRect(0, GLASS + 12, W, 8); cv.fillStyle = OR; cv.fillRect(0, GLASS + 18, W, 3);
+  cv.fillStyle = "#0d0d22"; cv.fillRect(DOOR.x - 48, GLASS - 14, 96, 34); cv.fillStyle = OR; cv.fillRect(DOOR.x - 50, GLASS - 16, 4, 38); cv.fillRect(DOOR.x + 46, GLASS - 16, 4, 38);
+  txt("OPERASYON", DOOR.x, GLASS + 6, "700 9px system-ui", "#ffffffaa"); cv.lineWidth = 1;
+}
+function draw() {
+  cv.clearRect(0, 0, W, H); opsCenter(); store();
+  for (const r of Object.values(A).sort((a, b) => a.y - b.y)) {
+    const bob = r.path.length ? Math.abs(Math.sin(r.step)) * 4 : 0, h = r.insan ? 82 : (r.name === HUB ? 90 : 75);
+    if (r.cur && r.t > 0) { cv.strokeStyle = r.col; cv.lineWidth = 3; cv.beginPath(); cv.ellipse(r.x, r.y, 32, 11, 0, 0, 7); cv.stroke(); cv.lineWidth = 1; }
+    cv.fillStyle = "#0005"; cv.beginPath(); cv.ellipse(r.x, r.y, 22, 7, 0, 0, 7); cv.fill();
+    if (r.insan) { const im = IMG[`${r.skin}-${r.face}.png`], w = im.naturalWidth ? im.naturalWidth * h / im.naturalHeight : 40; if (im.naturalWidth) cv.drawImage(im, r.x - w / 2, r.y - h - bob, w, h); }
+    else robot(r, r.x, r.y - bob, h / 15);
+    r.nt.style.left = r.x / W * 100 + "%"; r.nt.style.top = (r.y + 4) / H * 100 + "%";
+    if (r.bub) { if (now > r.bub.until) { r.bub.el.remove(); r.bub = null; } else { r.bub.el.style.left = r.x / W * 100 + "%"; r.bub.el.style.top = (r.y - h - 8) / H * 100 + "%"; } }
+  }
+  glass();
+  // spot: olayın olmadığı bölge kararır
+  dim += ((focus ? 1 : -1) - dim) * .05;
+  cv.fillStyle = `rgba(8,8,24,${.45 * Math.max(0, dim)})`; cv.fillRect(0, 0, W, GLASS - 14);
+  cv.fillStyle = `rgba(8,8,24,${.45 * Math.max(0, -dim)})`; cv.fillRect(0, GLASS + 21, W, H);
+  for (const p of packets) { cv.fillStyle = p.col; cv.shadowColor = p.col; cv.shadowBlur = 20; cv.beginPath(); cv.arc(p.x, p.y, 8, 0, 7); cv.fill(); cv.shadowBlur = 0; }
+  if (banner) { rr(W / 2 - 170, H / 2 + 60, 340, 64, 14, NV); txt(banner, W / 2, H / 2 + 102, "700 28px system-ui", OR); }
+}
+function frame(ts) {
+  const dt = Math.min(0.1, (ts - (last || ts)) / 1000) * +$("sp").value; last = ts;
+  if (running && sim(dt)) running = false, $("pl").textContent = "▶";
+  draw(); requestAnimationFrame(frame);
+}
+$("pl").onclick = () => { if (!running && ptr === evs.length) build(D); running = !running; $("pl").textContent = running ? "⏸" : "▶"; };
+$("rs").onclick = () => { build(D); running = true; $("pl").textContent = "⏸"; };
+const Q = new URLSearchParams(window.__Q || location.search);
+loaded.then(() => fetch(Q.get("data") || "bayi-telekom.json")).then(r => r.json()).then(d => { build(d); requestAnimationFrame(frame); });
+</script>
+</body>
+</html>
